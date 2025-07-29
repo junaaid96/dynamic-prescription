@@ -4,10 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 
 import { AppComponent } from './app.component';
+import { ComprehensiveLayoutComponent } from './components/comprehensive-layout.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    ComprehensiveLayoutComponent
   ],
   imports: [
     BrowserModule,

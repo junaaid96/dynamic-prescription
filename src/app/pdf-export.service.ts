@@ -75,7 +75,7 @@ export class PdfExportService {
     pdf.setTextColor(0, 0, 0); // Reset color
   }
 
-  private renderSection(pdf: jsPDF, section: Section, paperDimensions: { width: number; height: number }): void {
+  private renderSection(pdf: jsPDF, section: Section, paperDimensions: { width: number; height: number; }): void {
     const x = (section.position.x / 100) * paperDimensions.width;
     const y = (section.position.y / 100) * paperDimensions.height;
     const width = (section.size.width / 100) * paperDimensions.width;
