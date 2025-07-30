@@ -68,7 +68,7 @@ export class PdfExportService {
     // Add subtle watermark
     pdf.setTextColor(240, 240, 240);
     pdf.setFontSize(60);
-    pdf.text('egHealth', paperDimensions.width / 2, paperDimensions.height / 2, {
+    pdf.text('', paperDimensions.width / 2, paperDimensions.height / 2, {
       align: 'center',
       angle: 45
     });
