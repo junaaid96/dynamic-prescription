@@ -106,7 +106,7 @@ export class ComprehensiveLayoutComponent implements OnInit {
       id: 'patient-1',
       type: 'patient',
       name: 'Patient Information',
-      content: 'Patient Information:\nName: [Patient Name]\nAge: [Age]\nGender: [Gender]\nContact: [Phone Number]\nAddress: [Address]',
+      content: 'Patient Information:\nName: [Patient Name]\nAge: [Age]\nGender: [Gender]\nContact: [Phone Number]\nAddress: [Address]\nEmergency Contact: [Emergency Contact]',
       position: { x: 0, y: 0 },
       size: { width: 100, height: 20 },
       style: {
@@ -150,7 +150,7 @@ export class ComprehensiveLayoutComponent implements OnInit {
   ];
 
   // Body sections for drag and drop - initialized with default values
-  bodySections: BodySection[] = [...this.DEFAULT_SECTIONS];
+  bodySections: BodySection[] = [];
 
   selectedSection: BodySection | null = null;
   draggedSection: BodySection | null = null;
@@ -195,10 +195,17 @@ export class ComprehensiveLayoutComponent implements OnInit {
   constructor(private pdfExportService: PdfExportService) { }
 
   ngOnInit(): void {
+    // Initialize body sections with proper deep copy of defaults
+    this.bodySections = JSON.parse(JSON.stringify(this.DEFAULT_SECTIONS));
+    
     this.updateLayout();
     this.updateColumnContent();
     this.validateAllSections();
     this.setupKeyboardShortcuts();
+    
+    // Debug: Log initial default sections
+    console.log('Initial DEFAULT_SECTIONS:', this.DEFAULT_SECTIONS);
+    console.log('Initial bodySections:', this.bodySections);
   }
 
   ngOnDestroy(): void {
@@ -405,14 +412,61 @@ export class ComprehensiveLayoutComponent implements OnInit {
 
   // Restore default values for a specific section
   restoreSectionDefaults(sectionId: string): void {
+    console.log('=== RESTORE DEFAULTS CALLED ===');
+    console.log('Section ID:', sectionId);
+    console.log('All body sections:', this.bodySections);
+    
     const section = this.bodySections.find(s => s.id === sectionId);
     if (section) {
+      console.log('Found section:', section);
       const defaultSection = this.DEFAULT_SECTIONS.find(ds => ds.type === section.type);
       if (defaultSection) {
+        console.log('Found default section for type:', section.type, defaultSection);
+        console.log('Before restore:', { 
+          content: section.content, 
+          position: section.position, 
+          size: section.size, 
+          style: section.style 
+        });
+        console.log('Default values:', { 
+          content: defaultSection.content, 
+          position: defaultSection.position, 
+          size: defaultSection.size, 
+          style: defaultSection.style 
+        });
+        
+        // Restore all default values including position and size
         section.content = defaultSection.content;
+        section.position = { ...defaultSection.position };
+        section.size = { ...defaultSection.size };
         section.style = { ...defaultSection.style };
+        
+        console.log('After restore:', { 
+          content: section.content, 
+          position: section.position, 
+          size: section.size, 
+          style: section.style 
+        });
+        
+        // Force Angular to detect changes by creating a new array reference
+        this.bodySections = [...this.bodySections];
+        
+        // Update the selected section reference if it's the same section
+        if (this.selectedSection && this.selectedSection.id === sectionId) {
+          this.selectedSection = { ...section };
+        }
+        
+        console.log('Final bodySections array:', this.bodySections);
+        console.log('Final selectedSection:', this.selectedSection);
+        
         this.showNotification(`Default values restored for ${section.name}`, 'success');
+      } else {
+        console.error('No default section found for type:', section.type);
+        this.showNotification(`No default values found for ${section.name}`, 'error');
       }
+    } else {
+      console.error('Section not found with ID:', sectionId);
+      this.showNotification('Section not found', 'error');
     }
   }
 
@@ -806,4 +860,6 @@ export class ComprehensiveLayoutComponent implements OnInit {
   private validateAllSections(): void {
     this.bodySections = this.bodySections.map(section => this.validateSectionValues(section));
   }
+
+
 } 
