@@ -100,15 +100,15 @@ export class ComprehensiveLayoutComponent implements OnInit {
     }
   };
 
-  // Body sections for drag and drop
-  bodySections: BodySection[] = [
+  // Default section configurations - these values are preserved by default
+  private readonly DEFAULT_SECTIONS: BodySection[] = [
     {
       id: 'patient-1',
       type: 'patient',
       name: 'Patient Information',
       content: 'Patient Information:\nName: [Patient Name]\nAge: [Age]\nGender: [Gender]\nContact: [Phone Number]\nAddress: [Address]',
-      position: { x: 5, y: 5 },
-      size: { width: 90, height: 20 },
+      position: { x: 0, y: 0 },
+      size: { width: 100, height: 20 },
       style: {
         fontSize: 12,
         fontWeight: 'normal',
@@ -122,8 +122,8 @@ export class ComprehensiveLayoutComponent implements OnInit {
       type: 'diagnostic',
       name: 'Diagnosis',
       content: 'Diagnosis:\n[Enter diagnosis details here]\n\nSymptoms:\n[Enter symptoms here]\n\nNotes:\n[Additional notes]',
-      position: { x: 5, y: 30 },
-      size: { width: 45, height: 35 },
+      position: { x: 0, y: 20 },
+      size: { width: 50, height: 80 },
       style: {
         fontSize: 12,
         fontWeight: 'normal',
@@ -137,8 +137,8 @@ export class ComprehensiveLayoutComponent implements OnInit {
       type: 'prescription',
       name: 'Prescription',
       content: 'Rx:\n1. [Medicine Name] - [Dosage] - [Frequency]\n2. [Medicine Name] - [Dosage] - [Frequency]\n3. [Medicine Name] - [Dosage] - [Frequency]\n\nInstructions:\n[Special instructions]',
-      position: { x: 55, y: 30 },
-      size: { width: 40, height: 35 },
+      position: { x: 50, y: 20 },
+      size: { width: 50, height: 80 },
       style: {
         fontSize: 12,
         fontWeight: 'normal',
@@ -148,6 +148,9 @@ export class ComprehensiveLayoutComponent implements OnInit {
       }
     }
   ];
+
+  // Body sections for drag and drop - initialized with default values
+  bodySections: BodySection[] = [...this.DEFAULT_SECTIONS];
 
   selectedSection: BodySection | null = null;
   draggedSection: BodySection | null = null;
@@ -194,6 +197,7 @@ export class ComprehensiveLayoutComponent implements OnInit {
   ngOnInit(): void {
     this.updateLayout();
     this.updateColumnContent();
+    this.validateAllSections();
     this.setupKeyboardShortcuts();
   }
 
@@ -330,15 +334,30 @@ export class ComprehensiveLayoutComponent implements OnInit {
     }
   }
 
-  // Body Section Management
-  addBodySection(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): void {
+  // Get default content for section types
+  private getDefaultContent(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): string {
     const defaultContent = {
       diagnostic: 'Diagnosis:\n[Enter diagnosis details here]\n\nSymptoms:\n[Enter symptoms here]\n\nNotes:\n[Additional notes]',
       prescription: 'Rx:\n1. [Medicine Name] - [Dosage] - [Frequency]\n2. [Medicine Name] - [Dosage] - [Frequency]\n3. [Medicine Name] - [Dosage] - [Frequency]\n\nInstructions:\n[Special instructions]',
       custom: '[Enter custom content here]\n\n[Additional information]',
       patient: 'Patient Information:\nName: [Patient Name]\nAge: [Age]\nGender: [Gender]\nContact: [Phone Number]\nAddress: [Address]\nEmergency Contact: [Emergency Contact]'
     };
+    return defaultContent[type];
+  }
 
+  // Get default style for sections
+  private getDefaultStyle() {
+    return {
+      fontSize: 12,
+      fontWeight: 'normal',
+      textAlign: 'left',
+      padding: 10,
+      margin: 5
+    };
+  }
+
+  // Body Section Management
+  addBodySection(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): void {
     // Calculate position to avoid overlapping
     const existingSections = this.bodySections.length;
     const baseX = 5 + (existingSections % 2) * 50;
@@ -348,16 +367,10 @@ export class ComprehensiveLayoutComponent implements OnInit {
       id: `${type}-${Date.now()}`,
       type: type,
       name: type.charAt(0).toUpperCase() + type.slice(1) + (type === 'patient' ? ' Information' : ''),
-      content: defaultContent[type],
+      content: this.getDefaultContent(type),
       position: { x: baseX, y: baseY },
       size: { width: 45, height: 25 },
-      style: {
-        fontSize: 12,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        padding: 10,
-        margin: 5
-      }
+      style: this.getDefaultStyle()
     };
 
     this.bodySections.push(newSection);
@@ -365,7 +378,13 @@ export class ComprehensiveLayoutComponent implements OnInit {
   }
 
   selectBodySection(section: BodySection): void {
-    this.selectedSection = section;
+    // Validate section values before selecting
+    const validatedSection = this.validateSectionValues(section);
+    const sectionIndex = this.bodySections.findIndex(s => s.id === section.id);
+    if (sectionIndex !== -1) {
+      this.bodySections[sectionIndex] = validatedSection;
+    }
+    this.selectedSection = validatedSection;
   }
 
   deleteBodySection(sectionId: string): void {
@@ -382,6 +401,34 @@ export class ComprehensiveLayoutComponent implements OnInit {
       position: { x: section.position.x + 5, y: section.position.y + 5 }
     };
     this.bodySections.push(duplicated);
+  }
+
+  // Restore default values for a specific section
+  restoreSectionDefaults(sectionId: string): void {
+    const section = this.bodySections.find(s => s.id === sectionId);
+    if (section) {
+      const defaultSection = this.DEFAULT_SECTIONS.find(ds => ds.type === section.type);
+      if (defaultSection) {
+        section.content = defaultSection.content;
+        section.style = { ...defaultSection.style };
+        this.showNotification(`Default values restored for ${section.name}`, 'success');
+      }
+    }
+  }
+
+  // Get default values for a section type
+  getDefaultValuesForType(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): Partial<BodySection> {
+    const defaultSection = this.DEFAULT_SECTIONS.find(ds => ds.type === type);
+    if (defaultSection) {
+      return {
+        content: defaultSection.content,
+        style: { ...defaultSection.style }
+      };
+    }
+    return {
+      content: this.getDefaultContent(type),
+      style: this.getDefaultStyle()
+    };
   }
 
   // Drag and Drop functionality
@@ -553,57 +600,13 @@ export class ComprehensiveLayoutComponent implements OnInit {
         }
       };
 
-      this.bodySections = [
-        {
-          id: 'patient-1',
-          type: 'patient',
-          name: 'Patient Information',
-          content: 'Patient Information:\nName: [Patient Name]\nAge: [Age]\nGender: [Gender]\nContact: [Phone Number]\nAddress: [Address]',
-          position: { x: 5, y: 5 },
-          size: { width: 90, height: 20 },
-          style: {
-            fontSize: 12,
-            fontWeight: 'normal',
-            textAlign: 'left',
-            padding: 10,
-            margin: 5
-          }
-        },
-        {
-          id: 'diagnostic-1',
-          type: 'diagnostic',
-          name: 'Diagnosis',
-          content: 'Diagnosis:\n[Enter diagnosis details here]\n\nSymptoms:\n[Enter symptoms here]\n\nNotes:\n[Additional notes]',
-          position: { x: 5, y: 30 },
-          size: { width: 45, height: 35 },
-          style: {
-            fontSize: 12,
-            fontWeight: 'normal',
-            textAlign: 'left',
-            padding: 10,
-            margin: 5
-          }
-        },
-        {
-          id: 'prescription-1',
-          type: 'prescription',
-          name: 'Prescription',
-          content: 'Rx:\n1. [Medicine Name] - [Dosage] - [Frequency]\n2. [Medicine Name] - [Dosage] - [Frequency]\n3. [Medicine Name] - [Dosage] - [Frequency]\n\nInstructions:\n[Special instructions]',
-          position: { x: 55, y: 30 },
-          size: { width: 40, height: 35 },
-          style: {
-            fontSize: 12,
-            fontWeight: 'normal',
-            textAlign: 'left',
-            padding: 10,
-            margin: 5
-          }
-        }
-      ];
+      // Reset body sections to default values
+      this.bodySections = JSON.parse(JSON.stringify(this.DEFAULT_SECTIONS));
 
       this.selectedSection = null;
       this.updateLayout();
       this.updateColumnContent();
+      this.validateAllSections();
       this.showNotification('Configuration reset to defaults!', 'success');
     }
   }
@@ -742,13 +745,65 @@ export class ComprehensiveLayoutComponent implements OnInit {
           this.updateLayout();
         }
         if (configData.bodySections) {
-          this.bodySections = configData.bodySections;
+          // Ensure loaded sections have default values if missing
+          this.bodySections = this.ensureDefaultValues(configData.bodySections);
         }
+        this.showNotification('Configuration loaded successfully!', 'success');
       } catch (error) {
         console.error('Error loading configuration:', error);
-        alert('Error loading configuration file. Please check the file format.');
+        this.showNotification('Error loading configuration file. Please check the file format.', 'error');
       }
     };
     reader.readAsText(file);
+  }
+
+  // Ensure sections have default values if missing
+  private ensureDefaultValues(sections: BodySection[]): BodySection[] {
+    return sections.map(section => {
+      const defaultSection = this.DEFAULT_SECTIONS.find(ds => ds.type === section.type);
+      if (defaultSection) {
+        return {
+          ...defaultSection,
+          ...section,
+          id: section.id || `${section.type}-${Date.now()}`,
+          content: section.content || defaultSection.content,
+          style: {
+            ...defaultSection.style,
+            ...section.style
+          }
+        };
+      }
+      return section;
+    });
+  }
+
+  // Validate and fix section values to ensure they stay within bounds
+  private validateSectionValues(section: BodySection): BodySection {
+    const validated = { ...section };
+    
+    // Ensure position values are within bounds (0-90%)
+    validated.position.x = Math.max(0, Math.min(90, validated.position.x));
+    validated.position.y = Math.max(0, Math.min(90, validated.position.y));
+    
+    // Ensure size values are reasonable (10-100% width, 5-80% height)
+    validated.size.width = Math.max(10, Math.min(100, validated.size.width));
+    validated.size.height = Math.max(5, Math.min(80, validated.size.height));
+    
+    // Ensure style values are within reasonable bounds
+    validated.style.fontSize = Math.max(8, Math.min(24, validated.style.fontSize));
+    validated.style.padding = Math.max(0, Math.min(30, validated.style.padding));
+    validated.style.margin = Math.max(0, Math.min(20, validated.style.margin));
+    
+    // Ensure textAlign is valid
+    if (!['left', 'center', 'right'].includes(validated.style.textAlign)) {
+      validated.style.textAlign = 'left';
+    }
+    
+    return validated;
+  }
+
+  // Apply validation to all sections
+  private validateAllSections(): void {
+    this.bodySections = this.bodySections.map(section => this.validateSectionValues(section));
   }
 } 
