@@ -227,7 +227,16 @@
 
         <!-- Selected Section Editor -->
         <div *ngIf="selectedSection" class="section-editor">
-          <h4>✏️ Edit Section: {{ selectedSection.name }}</h4>
+          <div class="section-editor-header">
+            <h4>✏️ Edit Section: {{ selectedSection.name }}</h4>
+            <button 
+              (click)="restoreSectionDefaults(selectedSection.id)" 
+              class="restore-defaults-btn"
+              title="Restore default values for this section"
+            >
+              🔄 Restore Defaults
+            </button>
+          </div>
           
           <div class="editor-group">
             <label>Content</label>
