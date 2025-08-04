@@ -322,12 +322,34 @@
           <button
             (click)="saveConfiguration()"
             class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 mb-3"
-            title="Save current configuration (Ctrl+S)"
+            title="Save current configuration to file (Ctrl+S)"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"></path>
             </svg>
-            Save Configuration
+            Save to File
+          </button>
+          
+          <button
+            (click)="openSaveSettingsModal()"
+            class="w-full bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            title="Save current configuration to settings"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+            </svg>
+            Save Setting
+          </button>
+          
+          <button
+            (click)="openLoadSettingsModal()"
+            class="w-full bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            title="Load saved settings"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            Load Settings
           </button>
           
           <div>
@@ -341,12 +363,12 @@
             <button
               (click)="fileInput.click()"
               class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 mb-3"
-              title="Load saved configuration"
+              title="Load configuration from file"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
               </svg>
-              Load Configuration
+              Load from File
             </button>
           </div>
 
@@ -570,6 +592,150 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Settings Modal -->
+  <div *ngIf="showSettingsModal" class="modal-overlay" (click)="closeSaveSettingsModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>💾 Save Setting</h3>
+        <button (click)="closeSaveSettingsModal()" class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="settingName">Setting Name *</label>
+          <input
+            id="settingName"
+            type="text"
+            [(ngModel)]="newSettingName"
+            placeholder="Enter a name for this setting"
+            class="form-input"
+            maxlength="50"
+          >
+        </div>
+        <div class="form-group">
+          <label for="settingDescription">Description (Optional)</label>
+          <textarea
+            id="settingDescription"
+            [(ngModel)]="newSettingDescription"
+            placeholder="Enter a description for this setting"
+            class="form-textarea"
+            rows="3"
+            maxlength="200"
+          ></textarea>
+        </div>
+        <div class="setting-preview">
+          <h4>📋 What will be saved:</h4>
+          <ul>
+            <li>Page layout configuration</li>
+            <li>All content sections</li>
+            <li>Header and footer content</li>
+            <li>Column layout settings</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button (click)="closeSaveSettingsModal()" class="btn-secondary">Cancel</button>
+        <button (click)="saveCurrentSetting()" class="btn-primary" [disabled]="!newSettingName.trim()">
+          Save Setting
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Settings Modal -->
+  <div *ngIf="showLoadSettingsModal" class="modal-overlay" (click)="closeLoadSettingsModal()">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>📂 Load Settings</h3>
+        <button (click)="closeLoadSettingsModal()" class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- Search and Actions -->
+        <div class="settings-actions">
+          <div class="search-box">
+            <input
+              type="text"
+              [(ngModel)]="searchQuery"
+              placeholder="Search settings..."
+              class="search-input"
+            >
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+          <div class="settings-buttons">
+            <button (click)="exportAllSettings()" class="btn-secondary" title="Export all settings">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Export All
+            </button>
+            <input
+              type="file"
+              accept=".json"
+              (change)="importSettings($event)"
+              style="display: none"
+              #importFileInput
+            />
+            <button (click)="importFileInput.click()" class="btn-secondary" title="Import settings">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+              </svg>
+              Import
+            </button>
+            <button (click)="clearAllSettings()" class="btn-danger" title="Clear all settings">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+              Clear All
+            </button>
+          </div>
+        </div>
+
+        <!-- Settings List -->
+        <div class="settings-list" *ngIf="getFilteredSettings().length > 0; else noSettings">
+          <div *ngFor="let setting of getFilteredSettings()" class="setting-item">
+            <div class="setting-info" (click)="loadSetting(setting)">
+              <div class="setting-header">
+                <h4 class="setting-name">{{ setting.name }}</h4>
+                <span class="setting-date">{{ formatDate(setting.timestamp) }}</span>
+              </div>
+              <p class="setting-description" *ngIf="setting.description">{{ setting.description }}</p>
+              <div class="setting-meta">
+                <span class="setting-version">v{{ setting.version }}</span>
+                <span class="setting-id">ID: {{ setting.id }}</span>
+              </div>
+            </div>
+            <div class="setting-actions">
+              <button (click)="loadSetting(setting)" class="btn-load" title="Load this setting">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                Load
+              </button>
+              <button (click)="deleteSetting(setting)" class="btn-delete" title="Delete this setting">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Settings Template -->
+        <ng-template #noSettings>
+          <div class="no-settings">
+            <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h3>No settings found</h3>
+            <p>No saved settings match your search criteria.</p>
+            <button (click)="closeLoadSettingsModal()" class="btn-primary">Close</button>
+          </div>
+        </ng-template>
       </div>
     </div>
   </div>

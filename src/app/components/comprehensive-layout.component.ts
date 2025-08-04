@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { PdfExportService } from '../pdf-export.service';
 import { Section, SectionColumn } from '../section.model';
+import { SettingsService, SavedSetting } from '../settings.service';
 
 export interface LayoutConfig {
   pageType: 'A4' | 'A5' | 'Letter' | 'Legal' | 'Custom';
@@ -155,6 +156,14 @@ export class ComprehensiveLayoutComponent implements OnInit {
   selectedSection: BodySection | null = null;
   draggedSection: BodySection | null = null;
 
+  // Settings management
+  showSettingsModal = false;
+  showLoadSettingsModal = false;
+  settingsHistory: SavedSetting[] = [];
+  newSettingName = '';
+  newSettingDescription = '';
+  searchQuery = '';
+
   // Layout dimensions for display
   layout = {
     totalWidth: this.config.totalWidth * this.INCH_TO_PX,
@@ -192,7 +201,10 @@ export class ComprehensiveLayoutComponent implements OnInit {
     { content: 'Date: _______________', width: 50 }
   ];
 
-  constructor(private pdfExportService: PdfExportService) { }
+  constructor(
+    private pdfExportService: PdfExportService,
+    private settingsService: SettingsService
+  ) { }
 
   ngOnInit(): void {
     // Initialize body sections with proper deep copy of defaults
@@ -783,6 +795,158 @@ export class ComprehensiveLayoutComponent implements OnInit {
     a.download = 'comprehensive-layout-config.json';
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // Settings management methods
+  openSaveSettingsModal(): void {
+    this.newSettingName = '';
+    this.newSettingDescription = '';
+    this.showSettingsModal = true;
+  }
+
+  closeSaveSettingsModal(): void {
+    this.showSettingsModal = false;
+    this.newSettingName = '';
+    this.newSettingDescription = '';
+  }
+
+  saveCurrentSetting(): void {
+    if (!this.newSettingName.trim()) {
+      this.showNotification('Please enter a name for your setting', 'error');
+      return;
+    }
+
+    const configData = {
+      layout: this.config,
+      bodySections: this.bodySections,
+      headerColumns: this.headerColumns,
+      footerColumns: this.footerColumns
+    };
+
+    try {
+      const savedSetting = this.settingsService.saveSetting(
+        this.newSettingName,
+        configData,
+        this.newSettingDescription
+      );
+      
+      this.showNotification(`Setting "${savedSetting.name}" saved successfully!`, 'success');
+      this.closeSaveSettingsModal();
+      this.loadSettingsHistory();
+    } catch (error) {
+      console.error('Error saving setting:', error);
+      this.showNotification('Failed to save setting. Please try again.', 'error');
+    }
+  }
+
+  openLoadSettingsModal(): void {
+    this.loadSettingsHistory();
+    this.showLoadSettingsModal = true;
+  }
+
+  closeLoadSettingsModal(): void {
+    this.showLoadSettingsModal = false;
+    this.searchQuery = '';
+  }
+
+  loadSettingsHistory(): void {
+    const history = this.settingsService.getSettingsHistory();
+    this.settingsHistory = history.settings;
+  }
+
+  loadSetting(setting: SavedSetting): void {
+    try {
+      const configData = setting.config;
+      
+      if (configData.layout) {
+        this.config = { ...this.config, ...configData.layout };
+        this.updateLayout();
+      }
+      
+      if (configData.bodySections) {
+        this.bodySections = this.ensureDefaultValues(configData.bodySections);
+      }
+      
+      if (configData.headerColumns) {
+        this.headerColumns = configData.headerColumns;
+      }
+      
+      if (configData.footerColumns) {
+        this.footerColumns = configData.footerColumns;
+      }
+      
+      this.closeLoadSettingsModal();
+      this.showNotification(`Setting "${setting.name}" loaded successfully!`, 'success');
+    } catch (error) {
+      console.error('Error loading setting:', error);
+      this.showNotification('Failed to load setting. Please try again.', 'error');
+    }
+  }
+
+  deleteSetting(setting: SavedSetting): void {
+    if (confirm(`Are you sure you want to delete "${setting.name}"?`)) {
+      try {
+        const success = this.settingsService.deleteSetting(setting.id);
+        if (success) {
+          this.showNotification(`Setting "${setting.name}" deleted successfully!`, 'success');
+          this.loadSettingsHistory();
+        } else {
+          this.showNotification('Failed to delete setting.', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting setting:', error);
+        this.showNotification('Failed to delete setting. Please try again.', 'error');
+      }
+    }
+  }
+
+  getFilteredSettings(): SavedSetting[] {
+    if (!this.searchQuery.trim()) {
+      return this.settingsHistory;
+    }
+    return this.settingsService.searchSettings(this.searchQuery);
+  }
+
+  formatDate(date: Date): string {
+    return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString();
+  }
+
+  exportAllSettings(): void {
+    try {
+      this.settingsService.exportSettings();
+      this.showNotification('All settings exported successfully!', 'success');
+    } catch (error) {
+      console.error('Error exporting settings:', error);
+      this.showNotification('Failed to export settings. Please try again.', 'error');
+    }
+  }
+
+  importSettings(event: any): void {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    this.settingsService.importSettings(file)
+      .then(() => {
+        this.showNotification('Settings imported successfully!', 'success');
+        this.loadSettingsHistory();
+      })
+      .catch((error) => {
+        console.error('Error importing settings:', error);
+        this.showNotification('Failed to import settings. Please check the file format.', 'error');
+      });
+  }
+
+  clearAllSettings(): void {
+    if (confirm('Are you sure you want to clear all saved settings? This action cannot be undone.')) {
+      try {
+        this.settingsService.clearAllSettings();
+        this.settingsHistory = [];
+        this.showNotification('All settings cleared successfully!', 'success');
+      } catch (error) {
+        console.error('Error clearing settings:', error);
+        this.showNotification('Failed to clear settings. Please try again.', 'error');
+      }
+    }
   }
 
   // Add load configuration method
