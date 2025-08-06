@@ -1,7 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { PdfExportService } from '../pdf-export.service';
 import { Section, SectionColumn } from '../section.model';
 import { SettingsService, SavedSetting } from '../settings.service';
+import { HtmlContentService } from '../html-content.service';
+import { ValidationService } from '../validation.service';
+import { ResponsiveService, ScreenSize } from '../responsive.service';
+import { TextSelectionData } from '../models/text-selection.model';
+import { TextFormatToolbarComponent } from './text-format-toolbar.component';
+import { HtmlParsingService } from '../html-parsing.service';
+import { Subscription } from 'rxjs';
 
 export interface LayoutConfig {
   pageType: 'A4' | 'A5' | 'Letter' | 'Legal' | 'Custom';
@@ -43,6 +50,7 @@ export interface BodySection {
     fontSize: number;
     fontWeight: string;
     textAlign: string;
+    fontColor: string;
     padding: number;
     margin: number;
   };
@@ -62,7 +70,7 @@ const PAPER_SIZES = {
   templateUrl: './comprehensive-layout.component.html',
   styleUrls: ['./comprehensive-layout.component.css']
 })
-export class ComprehensiveLayoutComponent implements OnInit {
+export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
   // Convert inches to pixels (assuming 96 DPI)
   private readonly INCH_TO_PX = 96;
 
@@ -71,24 +79,31 @@ export class ComprehensiveLayoutComponent implements OnInit {
 
   // Make Math available in template
   Math = Math;
+  
+  // Text formatting
+  @ViewChild(TextFormatToolbarComponent) textFormatToolbar!: TextFormatToolbarComponent;
+  @ViewChildren('contentTextArea') contentTextAreas!: QueryList<ElementRef<HTMLTextAreaElement>>;
+  @ViewChildren('headerTextArea') headerTextAreas!: QueryList<ElementRef<HTMLTextAreaElement>>;
+  @ViewChildren('footerTextArea') footerTextAreas!: QueryList<ElementRef<HTMLTextAreaElement>>;
+  currentTextSelection: TextSelectionData | null = null;
 
   config: LayoutConfig = {
     pageType: 'A4',
     totalWidth: PAPER_SIZES.A4.width,
     totalHeight: PAPER_SIZES.A4.height,
-    leftMargin: 0,
-    rightMargin: 0,
-    topMargin: 0,
-    bottomMargin: 0,
-    leftPadding: 0,
-    rightPadding: 0,
-    topPadding: 0,
-    bottomPadding: 0,
-    headerHeight: 1,
-    footerHeight: 1,
+    leftMargin: 0.1,
+    rightMargin: 0.1,
+    topMargin: 0.1,
+    bottomMargin: 0.1,
+    leftPadding: 0.1,
+    rightPadding: 0.1,
+    topPadding: 0.1,
+    bottomPadding: 0.1,
+    headerHeight: 1.5,
+    footerHeight: 1.5,
     columnLayout: {
-      column1: 40,
-      column2: 10,
+      column1: 50,
+      column2: 0,
       column3: 50
     },
     bodySection: {
@@ -101,60 +116,62 @@ export class ComprehensiveLayoutComponent implements OnInit {
     }
   };
 
-  // Default section configurations - these values are preserved by default
+  // Default section configurations with realistic mock data
   private readonly DEFAULT_SECTIONS: BodySection[] = [
     {
       id: 'patient-1',
       type: 'patient',
       name: 'Patient Information',
-      content: 'Patient Information:\nName: [Patient Name]\nAge: [Age]\nGender: [Gender]\nContact: [Phone Number]\nAddress: [Address]\nEmergency Contact: [Emergency Contact]',
+      content: 'P.ID: RX-2024-001452 | Date: January 15, 2024 | Name: Sarah Johnson | Age: 34 years | Gender: Female | Department: Internal Medicine | Contact: +1 (555) 123-4567 | Address: 123 Main Street, Springfield, IL 62701',
       position: { x: 0, y: 0 },
-      size: { width: 100, height: 20 },
+      size: { width: 100, height: 8 },
       style: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 'normal',
         textAlign: 'left',
-        padding: 10,
-        margin: 5
+        fontColor: '#000000',
+        padding: 8,
+        margin: 3
       }
     },
     {
       id: 'diagnostic-1',
       type: 'diagnostic',
       name: 'Diagnosis',
-      content: 'Diagnosis:\n[Enter diagnosis details here]\n\nSymptoms:\n[Enter symptoms here]\n\nNotes:\n[Additional notes]',
-      position: { x: 0, y: 20 },
-      size: { width: 50, height: 80 },
+      content: 'Chief Complaints:\n• Persistent cough for 2 weeks\n• Mild fever (100.4°F)\n• Fatigue and body aches\n• Sore throat\n\nDiagnosis:\nUpper Respiratory Tract Infection (URTI)\nViral syndrome with secondary bacterial infection\n\nVital Signs:\nBP: 125/78 mmHg, HR: 82 bpm\nTemp: 100.4°F, RR: 16/min\nO2 Sat: 98% on room air\n\nNotes:\nPatient presents with classic symptoms of viral URTI.\nNo underlying comorbidities. Good general condition.\nAdvised symptomatic treatment and follow-up.',
+      position: { x: 0, y: 10 },
+      size: { width: 50, height: 90 },
       style: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 'normal',
         textAlign: 'left',
-        padding: 10,
-        margin: 5
+        fontColor: '#000000',
+        padding: 8,
+        margin: 3
       }
     },
     {
       id: 'prescription-1',
       type: 'prescription',
       name: 'Prescription',
-      content: 'Rx:\n1. [Medicine Name] - [Dosage] - [Frequency]\n2. [Medicine Name] - [Dosage] - [Frequency]\n3. [Medicine Name] - [Dosage] - [Frequency]\n\nInstructions:\n[Special instructions]',
-      position: { x: 50, y: 20 },
-      size: { width: 50, height: 80 },
+      content: 'Rx\n\n1. Amoxicillin 500mg\n   Take 1 capsule 3 times daily for 7 days\n   (After meals)\n\n2. Paracetamol 650mg\n   Take 1 tablet every 6-8 hours as needed\n   (For fever and pain, max 4 tablets/day)\n\n3. Dextromethorphan Syrup 15mg/5ml\n   Take 2 teaspoons 3 times daily\n   (For cough relief)\n\n4. Vitamin C 500mg\n   Take 1 tablet daily for 10 days\n   (Immune support)\n\nInstructions:\n• Complete the full course of antibiotics\n• Drink plenty of fluids (8-10 glasses/day)\n• Take adequate rest\n• Return if symptoms worsen or persist beyond 5 days\n• Avoid cold foods and smoking',
+      position: { x: 50, y: 10 },
+      size: { width: 50, height: 90 },
       style: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 'normal',
         textAlign: 'left',
-        padding: 10,
-        margin: 5
+        fontColor: '#000000',
+        padding: 8,
+        margin: 3
       }
     }
   ];
 
-  // Body sections for drag and drop - initialized with default values
+  // Body sections for selection - initialized with default values
   bodySections: BodySection[] = [];
 
   selectedSection: BodySection | null = null;
-  draggedSection: BodySection | null = null;
 
   // Settings management
   showSettingsModal = false;
@@ -189,21 +206,74 @@ export class ComprehensiveLayoutComponent implements OnInit {
     { id: 'Custom', name: 'Custom Size', icon: 'settings' }
   ];
 
-  // Header and Footer column content
+  // Header and Footer column content with realistic mock data (2-column layout)
   headerColumns = [
-    { content: 'Dr. [Doctor Name]', width: 33 },
-    { content: '[Clinic Name]', width: 34 },
-    { content: '[Address]', width: 33 }
+    { 
+      content: 'Dr. Michael Rodriguez\nMBBS, MD (Internal Medicine)\nInternal Medicine Specialist\nSenior Consultant Physician\nSpringfield Medical Center\nChamber: Room 205, Level 2\nMon-Fri: 9:00 AM - 5:00 PM\nSat: 9:00 AM - 1:00 PM', 
+      width: 50,
+      style: {
+        fontSize: 11,
+        fontWeight: 'normal',
+        textAlign: 'left',
+        fontColor: '#000000',
+        padding: 8,
+        margin: 3
+      }
+    },
+    { 
+      content: 'Springfield Medical Center\n123 Healthcare Boulevard\nSpringfield, IL 62701\nPhone: (555) 123-CARE (2273)\nFax: (555) 123-4568\nEmail: info@springfieldmedical.com\nWebsite: www.springfieldmedical.com\n\nEmergency: (555) 911-HELP', 
+      width: 50,
+      style: {
+        fontSize: 11,
+        fontWeight: 'normal',
+        textAlign: 'left',
+        fontColor: '#000000',
+        padding: 8,
+        margin: 3
+      }
+    }
   ];
 
   footerColumns = [
-    { content: 'Doctor Signature:', width: 50 },
-    { content: 'Date: _______________', width: 50 }
+    { 
+      content: 'Doctor Signature:\n\n_________________________\nDr. Michael Rodriguez, MD\nRegistration No: IL-MD-2015-4789', 
+      width: 50,
+      style: {
+        fontSize: 11,
+        fontWeight: 'normal',
+        textAlign: 'left',
+        fontColor: '#000000',
+        padding: 8,
+        margin: 3
+      }
+    },
+    { 
+      content: 'Date: January 15, 2024\n\nNext Appointment: _________________\n\nContact for queries: (555) 123-CARE\n\n[Prescription Barcode] RX-2024-001452\nValid for 30 days from date of issue\nPresent this prescription at any licensed pharmacy', 
+      width: 50,
+      style: {
+        fontSize: 11,
+        fontWeight: 'normal',
+        textAlign: 'left',
+        fontColor: '#000000',
+        padding: 8,
+        margin: 3
+      }
+    }
   ];
+
+  // Editor states removed - using simple text editing now
+  
+  // Responsive design
+  private screenSizeSubscription?: Subscription;
+  currentScreenSize?: ScreenSize;
 
   constructor(
     private pdfExportService: PdfExportService,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    public htmlContentService: HtmlContentService,
+    private validationService: ValidationService,
+    private responsiveService: ResponsiveService,
+    private htmlParsingService: HtmlParsingService
   ) { }
 
   ngOnInit(): void {
@@ -215,6 +285,17 @@ export class ComprehensiveLayoutComponent implements OnInit {
     this.validateAllSections();
     this.setupKeyboardShortcuts();
     
+    // Subscribe to screen size changes
+    this.screenSizeSubscription = this.responsiveService.screenSize$.subscribe(
+      screenSize => {
+        this.currentScreenSize = screenSize;
+        this.handleResponsiveLayout(screenSize);
+      }
+    );
+    
+    // Get initial screen size
+    this.currentScreenSize = this.responsiveService.getCurrentScreenSize();
+    
     // Debug: Log initial default sections
     console.log('Initial DEFAULT_SECTIONS:', this.DEFAULT_SECTIONS);
     console.log('Initial bodySections:', this.bodySections);
@@ -222,6 +303,25 @@ export class ComprehensiveLayoutComponent implements OnInit {
 
   ngOnDestroy(): void {
     this.removeKeyboardShortcuts();
+    if (this.screenSizeSubscription) {
+      this.screenSizeSubscription.unsubscribe();
+    }
+  }
+
+  private handleResponsiveLayout(screenSize: ScreenSize): void {
+    const config = this.responsiveService.getOptimalConfigForScreen();
+    
+    // Adjust layout based on screen size
+    if (screenSize.isMobile) {
+      // Mobile optimizations
+      console.log('Mobile view detected');
+    } else if (screenSize.isTablet) {
+      // Tablet optimizations
+      console.log('Tablet view detected');
+    } else {
+      // Desktop optimizations
+      console.log('Desktop view detected');
+    }
   }
 
   private setupKeyboardShortcuts(): void {
@@ -316,50 +416,114 @@ export class ComprehensiveLayoutComponent implements OnInit {
   }
 
   updateColumnContent(): void {
-    // Update header columns based on column layout
+    // Update header columns based on column layout (maintain mock data)
     this.headerColumns = [];
     if (this.config.columnLayout.column1 > 0) {
-      this.headerColumns.push({ content: 'Dr. [Doctor Name]', width: this.config.columnLayout.column1 });
+      this.headerColumns.push({ 
+        content: 'Dr. Michael Rodriguez\nMBBS, MD (Internal Medicine)\nInternal Medicine Specialist\nSenior Consultant Physician\nSpringfield Medical Center\nChamber: Room 205, Level 2\nMon-Fri: 9:00 AM - 5:00 PM\nSat: 9:00 AM - 1:00 PM', 
+        width: this.config.columnLayout.column1,
+        style: {
+          fontSize: 11,
+          fontWeight: 'normal',
+          textAlign: 'left',
+          fontColor: '#000000',
+          padding: 8,
+          margin: 3
+        }
+      });
     }
     if (this.config.columnLayout.column2 > 0) {
-      this.headerColumns.push({ content: '[Clinic Name]', width: this.config.columnLayout.column2 });
+      this.headerColumns.push({ 
+        content: '[QR Code]\nScan for\nVerification', 
+        width: this.config.columnLayout.column2,
+        style: {
+          fontSize: 11,
+          fontWeight: 'normal',
+          textAlign: 'center',
+          fontColor: '#000000',
+          padding: 8,
+          margin: 3
+        }
+      });
     }
     if (this.config.columnLayout.column3 > 0) {
-      this.headerColumns.push({ content: '[Address]', width: this.config.columnLayout.column3 });
+      this.headerColumns.push({ 
+        content: 'Springfield Medical Center\n123 Healthcare Boulevard\nSpringfield, IL 62701\nPhone: (555) 123-CARE (2273)\nFax: (555) 123-4568\nEmail: info@springfieldmedical.com\nWebsite: www.springfieldmedical.com\n\nEmergency: (555) 911-HELP', 
+        width: this.config.columnLayout.column3,
+        style: {
+          fontSize: 11,
+          fontWeight: 'normal',
+          textAlign: 'left',
+          fontColor: '#000000',
+          padding: 8,
+          margin: 3
+        }
+      });
     }
 
-    // Update footer columns based on column layout
+    // Update footer columns based on column layout (maintain mock data)
     this.footerColumns = [];
     if (this.config.columnLayout.column1 > 0) {
-      this.footerColumns.push({ content: 'Doctor Signature:', width: this.config.columnLayout.column1 });
+      this.footerColumns.push({ 
+        content: 'Doctor Signature:\n\n_________________________\nDr. Michael Rodriguez, MD\nRegistration No: IL-MD-2015-4789', 
+        width: this.config.columnLayout.column1,
+        style: {
+          fontSize: 11,
+          fontWeight: 'normal',
+          textAlign: 'left',
+          fontColor: '#000000',
+          padding: 8,
+          margin: 3
+        }
+      });
     }
     if (this.config.columnLayout.column2 > 0) {
-      this.footerColumns.push({ content: 'Date: _______________', width: this.config.columnLayout.column2 });
+      this.footerColumns.push({ 
+        content: 'Date: January 15, 2024\n\nNext Appointment:\n_________________', 
+        width: this.config.columnLayout.column2,
+        style: {
+          fontSize: 11,
+          fontWeight: 'normal',
+          textAlign: 'center',
+          fontColor: '#000000',
+          padding: 8,
+          margin: 3
+        }
+      });
     }
     if (this.config.columnLayout.column3 > 0) {
-      this.footerColumns.push({ content: 'License: _______________', width: this.config.columnLayout.column3 });
+      this.footerColumns.push({ 
+        content: 'Date: January 15, 2024\n\nNext Appointment: _________________\n\nContact for queries: (555) 123-CARE\n\n[Prescription Barcode] RX-2024-001452\nValid for 30 days from date of issue\nPresent this prescription at any licensed pharmacy', 
+        width: this.config.columnLayout.column3,
+        style: {
+          fontSize: 11,
+          fontWeight: 'normal',
+          textAlign: 'left',
+          fontColor: '#000000',
+          padding: 8,
+          margin: 3
+        }
+      });
     }
   }
 
-  updateHeaderColumnContent(index: number, content: string): void {
-    if (this.headerColumns[index]) {
-      this.headerColumns[index].content = content;
-    }
+  // TinyMCE editor methods removed - using simple text editing now
+
+  // Helper method to convert newlines to HTML breaks
+  convertNewlinesToHtml(text: string): string {
+    if (!text) return '';
+    return text.replace(/\n/g, '<br>');
   }
 
-  updateFooterColumnContent(index: number, content: string): void {
-    if (this.footerColumns[index]) {
-      this.footerColumns[index].content = content;
-    }
-  }
 
-  // Get default content for section types
+
+  // Get default content for section types with realistic mock data
   private getDefaultContent(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): string {
     const defaultContent = {
-      diagnostic: 'Diagnosis:\n[Enter diagnosis details here]\n\nSymptoms:\n[Enter symptoms here]\n\nNotes:\n[Additional notes]',
-      prescription: 'Rx:\n1. [Medicine Name] - [Dosage] - [Frequency]\n2. [Medicine Name] - [Dosage] - [Frequency]\n3. [Medicine Name] - [Dosage] - [Frequency]\n\nInstructions:\n[Special instructions]',
-      custom: '[Enter custom content here]\n\n[Additional information]',
-      patient: 'Patient Information:\nName: [Patient Name]\nAge: [Age]\nGender: [Gender]\nContact: [Phone Number]\nAddress: [Address]\nEmergency Contact: [Emergency Contact]'
+      diagnostic: 'Chief Complaints:\n• [Primary symptom]\n• [Secondary symptom]\n• [Duration and severity]\n\nDiagnosis:\n[Primary diagnosis]\n[Secondary diagnosis if applicable]\n\nVital Signs:\nBP: ___/__ mmHg, HR: __ bpm\nTemp: __°F, RR: __/min\n\nClinical Notes:\n[Examination findings]\n[Treatment plan]\n[Follow-up instructions]',
+      prescription: 'Rx\n\n1. [Medicine Name] [Strength]\n   Take [frequency] for [duration]\n   ([Instructions - e.g., after meals])\n\n2. [Medicine Name] [Strength]\n   Take [frequency] for [duration]\n   ([Instructions])\n\n3. [Medicine Name] [Strength]\n   Take [frequency] for [duration]\n   ([Instructions])\n\nGeneral Instructions:\n• Complete the full course of medication\n• Take medicines as prescribed\n• Return if symptoms persist or worsen\n• Follow-up appointment: [Date]',
+      custom: 'Additional Information:\n\n[Lab Reports Required]\n[Dietary Restrictions]\n[Activity Limitations]\n[Special Precautions]\n\n[Any other relevant medical information]',
+      patient: 'P.ID: [Patient ID] | Date: [Date] | Name: [Full Name] | Age: [Age] years | Gender: [Male/Female] | Department: [Department] | Contact: [Phone Number] | Address: [Complete Address]'
     };
     return defaultContent[type];
   }
@@ -370,6 +534,7 @@ export class ComprehensiveLayoutComponent implements OnInit {
       fontSize: 12,
       fontWeight: 'normal',
       textAlign: 'left',
+      fontColor: '#000000',
       padding: 10,
       margin: 5
     };
@@ -382,13 +547,16 @@ export class ComprehensiveLayoutComponent implements OnInit {
     const baseX = 5 + (existingSections % 2) * 50;
     const baseY = 5 + Math.floor(existingSections / 2) * 40;
 
+    const defaultHeight = type === 'patient' ? 8 : 25; // Shorter height for patient sections
+    const defaultWidth = type === 'patient' ? 100 : 45; // Full width for patient sections
+
     const newSection: BodySection = {
       id: `${type}-${Date.now()}`,
       type: type,
       name: type.charAt(0).toUpperCase() + type.slice(1) + (type === 'patient' ? ' Information' : ''),
       content: this.getDefaultContent(type),
       position: { x: baseX, y: baseY },
-      size: { width: 45, height: 25 },
+      size: { width: defaultWidth, height: defaultHeight },
       style: this.getDefaultStyle()
     };
 
@@ -497,39 +665,12 @@ export class ComprehensiveLayoutComponent implements OnInit {
     };
   }
 
-  // Drag and Drop functionality
-  onDragStart(event: DragEvent, section: BodySection): void {
-    this.draggedSection = section;
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-    }
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'move';
-    }
-  }
-
-  onDrop(event: DragEvent): void {
-    event.preventDefault();
-    if (this.draggedSection && event.target) {
-      const target = event.target as HTMLElement;
-      const rect = target.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 100;
-      const y = ((event.clientY - rect.top) / rect.height) * 100;
-      
-      this.draggedSection.position.x = Math.max(0, Math.min(90, x));
-      this.draggedSection.position.y = Math.max(0, Math.min(90, y));
-      
-      this.draggedSection = null;
-    }
-  }
-
   // Add PDF export functionality
   async exportToPDF(): Promise<void> {
     try {
+      // Show loading indicator
+      this.showNotification('Generating PDF...', 'info');
+
       // Validate configuration before export
       if (!this.validateConfiguration()) {
         return;
@@ -537,11 +678,17 @@ export class ComprehensiveLayoutComponent implements OnInit {
 
       const sections: Section[] = this.convertLayoutToSections();
 
+      // Determine paper dimensions for custom size
+      const customSize = this.config.pageType === 'Custom' 
+        ? { width: this.config.totalWidth * 25.4, height: this.config.totalHeight * 25.4 } // Convert inches to mm
+        : undefined;
+
       const result = await this.pdfExportService.exportToPDF(
         sections,
         this.config.pageType,
-        undefined,
-        'comprehensive-layout'
+        customSize,
+        'prescription',
+        false // Use traditional jsPDF method to avoid border issues
       );
 
       if (result.success) {
@@ -557,36 +704,81 @@ export class ComprehensiveLayoutComponent implements OnInit {
     }
   }
 
+  async exportToPDFWithCanvas(): Promise<void> {
+    try {
+      // Show loading indicator
+      this.showNotification('Generating visual PDF...', 'info');
+
+      // Validate configuration before export
+      if (!this.validateConfiguration()) {
+        return;
+      }
+
+      const sections: Section[] = this.convertLayoutToSections();
+
+      // Determine paper dimensions for custom size
+      const customSize = this.config.pageType === 'Custom' 
+        ? { width: this.config.totalWidth * 25.4, height: this.config.totalHeight * 25.4 } // Convert inches to mm
+        : undefined;
+
+      const result = await this.pdfExportService.exportToPDF(
+        sections,
+        this.config.pageType,
+        customSize,
+        'prescription-visual',
+        true // Use canvas method with clean clone
+      );
+
+      if (result.success) {
+        this.showNotification('Visual PDF exported successfully!', 'success');
+        console.log('Visual PDF exported successfully');
+      } else {
+        this.showNotification('Failed to export visual PDF: ' + result.message, 'error');
+        console.error('Visual PDF export failed:', result.message);
+      }
+    } catch (error) {
+      this.showNotification('Failed to export visual PDF. Please try again.', 'error');
+      console.error('Error exporting visual PDF:', error);
+    }
+  }
+
   private validateConfiguration(): boolean {
-    // Check if page dimensions are valid
-    if (this.config.totalWidth <= 0 || this.config.totalHeight <= 0) {
-      this.showNotification('Invalid page dimensions. Please check width and height.', 'error');
-      return false;
-    }
-
-    // Check if margins are valid
-    const totalMargins = this.config.leftMargin + this.config.rightMargin;
-    const totalPadding = this.config.leftPadding + this.config.rightPadding;
+    // Use validation service for comprehensive validation
+    const layoutValidation = this.validationService.validateLayoutConfig(this.config);
+    const sectionsValidation = this.validationService.validateAllSections(this.bodySections);
     
-    if (totalMargins + totalPadding >= this.config.totalWidth) {
-      this.showNotification('Margins and padding exceed page width. Please adjust.', 'error');
+    // Show errors if any
+    if (!layoutValidation.isValid) {
+      layoutValidation.errors.forEach(error => {
+        this.showNotification(error, 'error');
+      });
       return false;
     }
-
-    if (this.config.topMargin + this.config.bottomMargin + this.config.topPadding + this.config.bottomPadding >= this.config.totalHeight) {
-      this.showNotification('Margins and padding exceed page height. Please adjust.', 'error');
+    
+    if (!sectionsValidation.isValid) {
+      sectionsValidation.errors.forEach(error => {
+        this.showNotification(error, 'error');
+      });
       return false;
     }
-
-    // Check if body sections exist
-    if (this.bodySections.length === 0) {
-      this.showNotification('No content sections added. Please add at least one section.', 'warning');
-    }
-
+    
+    // Show warnings
+    layoutValidation.warnings.forEach(warning => {
+      this.showNotification(warning, 'warning');
+    });
+    
+    sectionsValidation.warnings.forEach(warning => {
+      this.showNotification(warning, 'warning');
+    });
+    
     return true;
   }
 
-  private showNotification(message: string, type: 'success' | 'error' | 'warning'): void {
+  private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info'): void {
+    // Remove any existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(n => n.remove());
+
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
@@ -605,6 +797,7 @@ export class ComprehensiveLayoutComponent implements OnInit {
       animation: slideIn 0.3s ease-out;
       max-width: 300px;
       word-wrap: break-word;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     `;
 
     // Set background color based on type
@@ -618,12 +811,16 @@ export class ComprehensiveLayoutComponent implements OnInit {
       case 'warning':
         notification.style.backgroundColor = '#f59e0b';
         break;
+      case 'info':
+        notification.style.backgroundColor = '#3b82f6';
+        break;
     }
 
     // Add to document
     document.body.appendChild(notification);
 
-    // Remove after 3 seconds
+    // Remove after different durations based on type
+    const duration = type === 'info' ? 10000 : 3000; // Info messages stay longer
     setTimeout(() => {
       notification.style.animation = 'slideOut 0.3s ease-in';
       setTimeout(() => {
@@ -631,7 +828,7 @@ export class ComprehensiveLayoutComponent implements OnInit {
           document.body.removeChild(notification);
         }
       }, 300);
-    }, 3000);
+    }, duration);
   }
 
   // Add method to reset configuration to defaults
@@ -641,19 +838,19 @@ export class ComprehensiveLayoutComponent implements OnInit {
         pageType: 'A4',
         totalWidth: PAPER_SIZES.A4.width,
         totalHeight: PAPER_SIZES.A4.height,
-        leftMargin: 0,
-        rightMargin: 0,
-        topMargin: 0,
-        bottomMargin: 0,
-        leftPadding: 0,
-        rightPadding: 0,
-        topPadding: 0,
-        bottomPadding: 0,
-        headerHeight: 1,
-        footerHeight: 1,
+        leftMargin: 0.1,
+        rightMargin: 0.1,
+        topMargin: 0.1,
+        bottomMargin: 0.1,
+        leftPadding: 0.1,
+        rightPadding: 0.1,
+        topPadding: 0.1,
+        bottomPadding: 0.1,
+        headerHeight: 1.5,
+        footerHeight: 1.5,
         columnLayout: {
-          column1: 40,
-          column2: 10,
+          column1: 50,
+          column2: 0,
           column3: 50
         },
         bodySection: {
@@ -714,6 +911,7 @@ export class ComprehensiveLayoutComponent implements OnInit {
           fontSize: 14,
           fontWeight: 'bold',
           textAlign: 'center',
+          fontColor: '#000000',
           padding: 10,
           margin: 5
         }
@@ -771,6 +969,7 @@ export class ComprehensiveLayoutComponent implements OnInit {
           fontSize: 10,
           fontWeight: 'normal',
           textAlign: 'right',
+          fontColor: '#000000',
           padding: 8,
           margin: 5
         }
@@ -1003,9 +1202,9 @@ export class ComprehensiveLayoutComponent implements OnInit {
     validated.position.x = Math.max(0, Math.min(90, validated.position.x));
     validated.position.y = Math.max(0, Math.min(90, validated.position.y));
     
-    // Ensure size values are reasonable (10-100% width, 5-80% height)
+    // Ensure size values are reasonable (10-100% width, 5-95% height)
     validated.size.width = Math.max(10, Math.min(100, validated.size.width));
-    validated.size.height = Math.max(5, Math.min(80, validated.size.height));
+    validated.size.height = Math.max(5, Math.min(95, validated.size.height));
     
     // Ensure style values are within reasonable bounds
     validated.style.fontSize = Math.max(8, Math.min(24, validated.style.fontSize));
@@ -1017,12 +1216,104 @@ export class ComprehensiveLayoutComponent implements OnInit {
       validated.style.textAlign = 'left';
     }
     
+    // Ensure fontWeight is valid
+    if (!['normal', 'bold', 'italic'].includes(validated.style.fontWeight)) {
+      validated.style.fontWeight = 'normal';
+    }
+    
+    // Ensure fontColor is valid (basic hex color validation)
+    if (!validated.style.fontColor || !/^#([0-9A-F]{3}){1,2}$/i.test(validated.style.fontColor)) {
+      validated.style.fontColor = '#000000';
+    }
+    
     return validated;
   }
 
   // Apply validation to all sections
   private validateAllSections(): void {
     this.bodySections = this.bodySections.map(section => this.validateSectionValues(section));
+  }
+  
+  onTextAreaMouseUp(event: MouseEvent, textarea: HTMLTextAreaElement, content: string, type: 'body' | 'header' | 'footer', index?: number): void {
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && textarea.selectionStart !== textarea.selectionEnd) {
+      this.currentTextSelection = {
+        selectedText: textarea.value.substring(textarea.selectionStart, textarea.selectionEnd),
+        startIndex: textarea.selectionStart,
+        endIndex: textarea.selectionEnd,
+        targetElement: textarea
+      };
+
+      // Set the editor element for the toolbar
+      setTimeout(() => {
+        if (this.textFormatToolbar) {
+          this.textFormatToolbar.editorElement = textarea;
+          this.textFormatToolbar.checkForSelection();
+        }
+      }, 10);
+    } else {
+      this.currentTextSelection = null;
+    }
+  }
+
+  applyTextFormat(format: {format: string, value?: string}): void {
+    if (!this.currentTextSelection) return;
+    
+    const { targetElement, startIndex, endIndex, selectedText } = this.currentTextSelection;
+    const fullText = targetElement.value;
+    let formattedText = '';
+
+    // Apply formatting based on format type
+    switch(format.format) {
+      case 'bold':
+        formattedText = `<strong>${selectedText}</strong>`;
+        break;
+      case 'italic':
+        formattedText = `<em>${selectedText}</em>`;
+        break;
+      case 'color':
+        if (format.value) {
+          formattedText = `<span style="color:${format.value}">${selectedText}</span>`;
+        }
+        break;
+      default:
+        return;
+    }
+
+    // Replace the text in the textarea
+    const newText = fullText.substring(0, startIndex) + formattedText + fullText.substring(endIndex);
+    
+    // Clean and sanitize the HTML to ensure it's valid
+    const cleanedHtml = this.htmlParsingService.cleanAndPreserveHtml(newText);
+    
+    // Update the textarea value
+    targetElement.value = cleanedHtml;
+    
+    // Trigger change detection
+    const event = new Event('input', { bubbles: true });
+    targetElement.dispatchEvent(event);
+    
+    // Update the model
+    if (targetElement.classList.contains('content-textarea') && this.selectedSection) {
+      this.selectedSection.content = cleanedHtml;
+    } else if (targetElement.classList.contains('simple-text-editor')) {
+      // For header/footer columns, Angular's two-way binding should handle this
+      // but we can manually check and update if needed
+      const headerTextareas = this.headerTextAreas.toArray();
+      const footerTextareas = this.footerTextAreas.toArray();
+      
+      // Check if it's a header textarea
+      const headerIndex = headerTextareas.findIndex(item => item.nativeElement === targetElement);
+      if (headerIndex >= 0 && this.headerColumns[headerIndex]) {
+        this.headerColumns[headerIndex].content = cleanedHtml;
+      }
+      
+      // Check if it's a footer textarea
+      const footerIndex = footerTextareas.findIndex(item => item.nativeElement === targetElement);
+      if (footerIndex >= 0 && this.footerColumns[footerIndex]) {
+        this.footerColumns[footerIndex].content = cleanedHtml;
+      }
+    }
   }
 
 

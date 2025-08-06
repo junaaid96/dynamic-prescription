@@ -14,6 +14,7 @@ export interface Section {
         fontSize: number;
         fontWeight: string;
         textAlign: string;
+        fontColor: string;
         padding: number;
         margin: number;
     };

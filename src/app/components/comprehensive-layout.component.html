@@ -240,7 +240,13 @@
           
           <div class="editor-group">
             <label>Content</label>
-            <textarea [(ngModel)]="selectedSection.content" rows="4" class="content-textarea" placeholder="Enter section content..."></textarea>
+            <textarea 
+              #contentTextArea
+              [(ngModel)]="selectedSection.content" 
+              rows="4" 
+              class="content-textarea" 
+              placeholder="Enter section content..." 
+              (mouseup)="onTextAreaMouseUp($event, contentTextArea, selectedSection.content, 'body')"></textarea>
           </div>
 
           <div class="editor-group">
@@ -266,7 +272,7 @@
               </div>
               <div class="size-input">
                 <label>Height (%)</label>
-                <input type="number" [(ngModel)]="selectedSection.size.height" min="5" max="80" step="1">
+                <input type="number" [(ngModel)]="selectedSection.size.height" min="5" max="95" step="1">
               </div>
             </div>
           </div>
@@ -285,6 +291,18 @@
                   <option value="center">Center</option>
                   <option value="right">Right</option>
                 </select>
+              </div>
+              <div class="style-input">
+                <label>Font Weight</label>
+                <select [(ngModel)]="selectedSection.style.fontWeight">
+                  <option value="normal">Regular</option>
+                  <option value="bold">Bold</option>
+                  <option value="italic">Italic</option>
+                </select>
+              </div>
+              <div class="style-input">
+                <label>Font Color</label>
+                <input type="color" [(ngModel)]="selectedSection.style.fontColor">
               </div>
               <div class="style-input">
                 <label>Padding (px)</label>
@@ -308,12 +326,23 @@
           <button
             (click)="exportToPDF()"
             class="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 mb-3"
-            title="Export current layout to PDF (Ctrl+P)"
+            title="Export without borders using clean method"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
-            Export to PDF
+            Export Clean PDF
+          </button>
+          
+          <button
+            (click)="exportToPDFWithCanvas()"
+            class="w-full bg-orange-600 text-white px-4 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            title="Export exactly as shown (may include visual borders)"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            Export Visual PDF
           </button>
         </div>
 
@@ -423,7 +452,7 @@
               <span class="column-label">Column 1</span>
               <div class="column-control">
                 <button (click)="updateColumnLayout('column1', Math.max(0, config.columnLayout.column1 - 5))" title="Decrease width">-</button>
-                <input type="number" [(ngModel)]="config.columnLayout.column1" (input)="normalizeColumnWidths()" min="0" max="100">
+                <input type="number" [(ngModel)]="config.columnLayout.column1" (input)="updateColumnLayout('column1', config.columnLayout.column1)" (change)="updateColumnLayout('column1', config.columnLayout.column1)" min="0" max="100">
                 <button (click)="updateColumnLayout('column1', Math.min(100, config.columnLayout.column1 + 5))" title="Increase width">+</button>
               </div>
             </div>
@@ -431,7 +460,7 @@
               <span class="column-label">Column 2</span>
               <div class="column-control">
                 <button (click)="updateColumnLayout('column2', Math.max(0, config.columnLayout.column2 - 5))" title="Decrease width">-</button>
-                <input type="number" [(ngModel)]="config.columnLayout.column2" (input)="normalizeColumnWidths()" min="0" max="100">
+                <input type="number" [(ngModel)]="config.columnLayout.column2" (input)="updateColumnLayout('column2', config.columnLayout.column2)" (change)="updateColumnLayout('column2', config.columnLayout.column2)" min="0" max="100">
                 <button (click)="updateColumnLayout('column2', Math.min(100, config.columnLayout.column2 + 5))" title="Increase width">+</button>
               </div>
             </div>
@@ -439,7 +468,7 @@
               <span class="column-label">Column 3</span>
               <div class="column-control">
                 <button (click)="updateColumnLayout('column3', Math.max(0, config.columnLayout.column3 - 5))" title="Decrease width">-</button>
-                <input type="number" [(ngModel)]="config.columnLayout.column3" (input)="normalizeColumnWidths()" min="0" max="100">
+                <input type="number" [(ngModel)]="config.columnLayout.column3" (input)="updateColumnLayout('column3', config.columnLayout.column3)" (change)="updateColumnLayout('column3', config.columnLayout.column3)" min="0" max="100">
                 <button (click)="updateColumnLayout('column3', Math.min(100, config.columnLayout.column3 + 5))" title="Increase width">+</button>
               </div>
             </div>
@@ -456,14 +485,55 @@
           <h4>📝 Header Content</h4>
           <div class="column-content-grid">
             <div *ngFor="let col of headerColumns; let i = index" class="column-content-item">
-              <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
-              <textarea 
-                [(ngModel)]="col.content" 
-                (input)="updateHeaderColumnContent(i, col.content)"
-                rows="1"
-                class="column-content-textarea"
+              <div class="column-header">
+                <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
+              </div>
+
+              <!-- Simple textarea for header editing -->
+              <textarea
+                #headerTextArea
+                [(ngModel)]="col.content"
+                class="simple-text-editor"
+                rows="6"
                 [placeholder]="'Enter header content for column ' + (i + 1)"
+                (mouseup)="onTextAreaMouseUp($event, headerTextArea, col.content, 'header', i)"
               ></textarea>
+
+              <!-- Header Style Controls -->
+              <div class="style-controls">
+                <div class="style-input">
+                  <label>Font Size (px)</label>
+                  <input type="number" [(ngModel)]="col.style.fontSize" min="8" max="24" step="1">
+                </div>
+                <div class="style-input">
+                  <label>Text Align</label>
+                  <select [(ngModel)]="col.style.textAlign">
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+                <div class="style-input">
+                  <label>Font Weight</label>
+                  <select [(ngModel)]="col.style.fontWeight">
+                    <option value="normal">Regular</option>
+                    <option value="bold">Bold</option>
+                    <option value="italic">Italic</option>
+                  </select>
+                </div>
+                <div class="style-input">
+                  <label>Font Color</label>
+                  <input type="color" [(ngModel)]="col.style.fontColor">
+                </div>
+                <div class="style-input">
+                  <label>Padding (px)</label>
+                  <input type="number" [(ngModel)]="col.style.padding" min="0" max="30" step="1">
+                </div>
+                <div class="style-input">
+                  <label>Margin (px)</label>
+                  <input type="number" [(ngModel)]="col.style.margin" min="0" max="20" step="1">
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -473,14 +543,55 @@
           <h4>📝 Footer Content</h4>
           <div class="column-content-grid">
             <div *ngFor="let col of footerColumns; let i = index" class="column-content-item">
-              <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
-              <textarea 
-                [(ngModel)]="col.content" 
-                (input)="updateFooterColumnContent(i, col.content)"
-                rows="1"
-                class="column-content-textarea"
+              <div class="column-header">
+                <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
+              </div>
+
+              <!-- Simple textarea for footer editing -->
+              <textarea
+                #footerTextArea
+                [(ngModel)]="col.content"
+                class="simple-text-editor"
+                rows="6"
                 [placeholder]="'Enter footer content for column ' + (i + 1)"
+                (mouseup)="onTextAreaMouseUp($event, footerTextArea, col.content, 'footer', i)"
               ></textarea>
+
+              <!-- Footer Style Controls -->
+              <div class="style-controls">
+                <div class="style-input">
+                  <label>Font Size (px)</label>
+                  <input type="number" [(ngModel)]="col.style.fontSize" min="8" max="24" step="1">
+                </div>
+                <div class="style-input">
+                  <label>Text Align</label>
+                  <select [(ngModel)]="col.style.textAlign">
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+                <div class="style-input">
+                  <label>Font Weight</label>
+                  <select [(ngModel)]="col.style.fontWeight">
+                    <option value="normal">Regular</option>
+                    <option value="bold">Bold</option>
+                    <option value="italic">Italic</option>
+                  </select>
+                </div>
+                <div class="style-input">
+                  <label>Font Color</label>
+                  <input type="color" [(ngModel)]="col.style.fontColor">
+                </div>
+                <div class="style-input">
+                  <label>Padding (px)</label>
+                  <input type="number" [(ngModel)]="col.style.padding" min="0" max="30" step="1">
+                </div>
+                <div class="style-input">
+                  <label>Margin (px)</label>
+                  <input type="number" [(ngModel)]="col.style.margin" min="0" max="20" step="1">
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -547,15 +658,22 @@
                    [style.width.px]="layout.totalWidth - layout.leftMargin - layout.rightMargin - layout.leftPadding - layout.rightPadding"
                    [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding">
                 <div class="area-content">
-                  <div class="header-area" *ngIf="config.headerHeight > 0" [style.height.px]="layout.headerHeight">
+                                    <div class="header-area" *ngIf="config.headerHeight > 0" [style.height.px]="layout.headerHeight">
                     <div class="header-columns">
-                      <div *ngFor="let col of headerColumns" class="header-column" [style.width.%]="col.width">
-                        {{ col.content }}
+                      <div *ngFor="let col of headerColumns" class="header-column" 
+                           [style.width.%]="col.width"
+                           [style.font-size.px]="col.style.fontSize"
+                           [style.font-weight]="col.style.fontWeight"
+                           [style.font-style]="col.style.fontWeight === 'italic' ? 'italic' : 'normal'"
+                           [style.color]="col.style.fontColor"
+                           [style.text-align]="col.style.textAlign"
+                           [style.padding.px]="col.style.padding"
+                           [style.margin.px]="col.style.margin">
+                        <div [innerHTML]="convertNewlinesToHtml(col.content) | safeHtml"></div>
                       </div>
                     </div>
                   </div>
-                  <div class="body-area" [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding - layout.headerHeight - layout.footerHeight"
-                       (dragover)="onDragOver($event)" (drop)="onDrop($event)">
+                  <div class="body-area" [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding - layout.headerHeight - layout.footerHeight">
                     <!-- Body Sections -->
                     <div *ngFor="let section of bodySections" 
                          class="body-section-element"
@@ -565,25 +683,34 @@
                          [style.width.%]="section.size.width"
                          [style.height.%]="section.size.height"
                          [style.font-size.px]="section.style.fontSize"
+                         [style.font-weight]="section.style.fontWeight"
+                         [style.font-style]="section.style.fontWeight === 'italic' ? 'italic' : 'normal'"
+                         [style.color]="section.style.fontColor"
                          [style.text-align]="section.style.textAlign"
                          [style.padding.px]="section.style.padding"
                          [style.margin.px]="section.style.margin"
-                         draggable="true"
-                         (dragstart)="onDragStart($event, section)"
                          (click)="selectBodySection(section)">
-                      <div class="section-header">
-                        <span>{{ section.name }}</span>
-                        <div class="drag-handle">⋮</div>
-                      </div>
-                      <div class="section-content">
-                        {{ section.content }}
+                      <div class="section-content" 
+                           [style.font-size.px]="section.style.fontSize"
+                           [style.font-weight]="section.style.fontWeight"
+                           [style.font-style]="section.style.fontWeight === 'italic' ? 'italic' : 'normal'"
+                           [style.color]="section.style.fontColor">
+                        <div [innerHTML]="section.content | safeHtml"></div>
                       </div>
                     </div>
                   </div>
-                  <div class="footer-area" *ngIf="config.footerHeight > 0" [style.height.px]="layout.footerHeight">
+                                    <div class="footer-area" *ngIf="config.footerHeight > 0" [style.height.px]="layout.footerHeight">
                     <div class="footer-columns">
-                      <div *ngFor="let col of footerColumns" class="footer-column" [style.width.%]="col.width">
-                        {{ col.content }}
+                      <div *ngFor="let col of footerColumns" class="footer-column" 
+                           [style.width.%]="col.width"
+                           [style.font-size.px]="col.style.fontSize"
+                           [style.font-weight]="col.style.fontWeight"
+                           [style.font-style]="col.style.fontWeight === 'italic' ? 'italic' : 'normal'"
+                           [style.color]="col.style.fontColor"
+                           [style.text-align]="col.style.textAlign"
+                           [style.padding.px]="col.style.padding"
+                           [style.margin.px]="col.style.margin">
+                        <div [innerHTML]="convertNewlinesToHtml(col.content) | safeHtml"></div>
                       </div>
                     </div>
                   </div>
@@ -739,4 +866,12 @@
       </div>
     </div>
   </div>
+
+  <!-- TinyMCE editor modals removed - using simple text editing now -->
+  
+  <!-- Text formatting toolbar -->
+  <app-text-format-toolbar 
+    [editorElement]="currentTextSelection?.targetElement"
+    (formatText)="applyTextFormat($event)">
+  </app-text-format-toolbar>
 </div> 
