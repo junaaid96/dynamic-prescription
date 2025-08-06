@@ -5,4 +5,8 @@
 @tailwind components;
 @tailwind utilities;
 
+b, strong {
+  font-weight: bold;
+}
+
 

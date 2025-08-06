@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, forwardRef, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, forwardRef, OnChanges, SimpleChanges, NgZone, ChangeDetectorRef } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
@@ -45,7 +45,7 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
   @Input() placeholder: string = 'Enter content...';
   @Input() height: number = 200;
   @Input() disabled: boolean = false;
-  @Input() toolbar: string = 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist | link image';
+  @Input() toolbar: string = 'undo redo | bold italic underline | fontsize forecolor backcolor | alignleft aligncenter alignright | bullist numlist | link';
   @Input() menubar: boolean = false;
   @Input() statusbar: boolean = false;
   @Input() resize: boolean = false;
@@ -57,6 +57,9 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
   private onTouched = () => {};
   private editor: any = null;
   private isInternalChange = false;
+  private updateTimeout: any = null;
+
+  constructor(private ngZone: NgZone, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.editorConfig = {
@@ -64,35 +67,44 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
       menubar: this.menubar,
       statusbar: this.statusbar,
       resize: this.resize,
-      // Optimized plugin set for prescription content
+      // Optimized plugin set for prescription content with font formatting
       plugins: [
         'advlist', 'autolink', 'lists', 'link', 'charmap',
         'searchreplace', 'visualblocks', 'code',
-        'table', 'help', 'wordcount', 'paste'
+        'table', 'help', 'wordcount'
       ],
       toolbar: this.toolbar,
       placeholder: this.placeholder,
       branding: false,
       elementpath: false,
+      // Font size configuration - using pt units
+      fontsize_formats: '8pt 9pt 10pt 11pt 12pt 14pt 16pt 18pt 20pt 22pt 24pt 26pt 28pt 30pt 32pt 36pt 48pt 72pt',
+      // Override TinyMCE default formats to use pt only
+      formats: {
+        fontsize: { inline: 'span', styles: { 'font-size': '%value' } }
+      },
+      // Set default font size to 10pt
+      font_size_default: '10pt',
+      // Font family configuration  
+      font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Georgia=georgia,palatino,serif; Helvetica=helvetica,arial,sans-serif; Times New Roman=times new roman,times,serif; Verdana=verdana,geneva,sans-serif',
       // Remove deprecated options for TinyMCE 6.0 compatibility
-      keep_styles: true,
       verify_html: false,
       cleanup: false,
-      extended_valid_elements: 'p[align|style],div[align|style],span[align|style]',
-      valid_children: '+body[p|div|span]',
+      extended_valid_elements: 'p[align|style],div[align|style],span[style|class],font[face|size|color|style]',
+      valid_children: '+body[p|div|span|font]',
+      // Enable font size and family controls
+      toolbar_mode: 'sliding',
       // Add configuration to handle plugin loading issues
       browser_spellcheck: true,
       contextmenu: false,
       // Enhanced paste configuration for cleaner content
       paste_as_text: false,
-      paste_word_valid_elements: 'p,span,b,strong,i,em,u,strike,br,ul,ol,li',
-      paste_retain_style_properties: 'font-weight font-style text-decoration text-align',
-      paste_merge_formats: true,
+      // Removed: paste_retain_style_properties, paste_word_valid_elements, paste_merge_formats
       // Add better content style for TinyMCE 6.0
       content_style: `
         body { 
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-          font-size: 14px; 
+          font-size: 10pt; 
           line-height: 1.3; 
           margin: 0; 
           padding: 3px; 
@@ -108,6 +120,12 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
         div[align="right"] { text-align: right !important; }
         div[align="justify"] { text-align: justify !important; }
         .mce-content-body { padding: 3px; }
+        strong, b { font-weight: bold !important; }
+        em, i { font-style: italic !important; }
+        u { text-decoration: underline !important; }
+        span[style*="font-size"] { }
+        font[size] { }
+        * { font-size: inherit; }
       `,
       // Add better setup for TinyMCE 6.0
       setup: (editor: any) => {
@@ -119,14 +137,45 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
           }
         });
         
-        editor.on('change keyup', () => {
+        // Immediate update for critical events
+        const updateContentImmediate = () => {
           if (!this.isInternalChange) {
-            const content = editor.getContent();
-            this.content = content;
-            this.onChange(content);
-            this.contentChange.emit(content);
+            this.ngZone.run(() => {
+              const content = editor.getContent();
+              this.content = content;
+              this.onChange(content);
+              this.contentChange.emit(content);
+              this.cdr.detectChanges(); // Force change detection
+            });
           }
-        });
+        };
+        
+        // Debounced update for less critical events
+        const updateContentDebounced = () => {
+          if (!this.isInternalChange) {
+            if (this.updateTimeout) {
+              clearTimeout(this.updateTimeout);
+            }
+            this.updateTimeout = setTimeout(() => {
+              this.ngZone.run(() => {
+                const content = editor.getContent();
+                this.content = content;
+                this.onChange(content);
+                this.contentChange.emit(content);
+                this.cdr.detectChanges();
+              });
+            }, 50); // 50ms debounce for smooth typing
+          }
+        };
+        
+        // Immediate updates for typing and critical changes
+        editor.on('input keyup', updateContentImmediate);
+        
+        // Immediate updates for formatting and commands
+        editor.on('ExecCommand FormatApply FormatRemove', updateContentImmediate);
+        
+        // Debounced updates for other changes
+        editor.on('change paste undo redo NodeChange', updateContentDebounced);
         
         editor.on('blur', () => {
           this.onTouched();
@@ -160,6 +209,11 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
         this.isInternalChange = true;
         this.editor.setContent(newContent || '');
         this.isInternalChange = false;
+        
+        // Trigger change detection for external content changes
+        this.ngZone.run(() => {
+          this.cdr.detectChanges();
+        });
       }
     }
   }
@@ -184,9 +238,12 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
     }
     
     if (content !== undefined) {
-      this.content = content;
-      this.onChange(content);
-      this.contentChange.emit(content);
+      this.ngZone.run(() => {
+        this.content = content;
+        this.onChange(content);
+        this.contentChange.emit(content);
+        this.cdr.detectChanges();
+      });
     }
   }
 
@@ -197,6 +254,11 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
       this.isInternalChange = true;
       this.editor.setContent(this.content);
       this.isInternalChange = false;
+      
+      // Trigger change detection after programmatic updates
+      this.ngZone.run(() => {
+        this.cdr.detectChanges();
+      });
     }
   }
 
@@ -213,8 +275,14 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
   }
 
   ngOnDestroy() {
+    if (this.updateTimeout) {
+      clearTimeout(this.updateTimeout);
+      this.updateTimeout = null;
+    }
+    
     if (this.editor) {
       this.editor.destroy();
+      this.editor = null;
     }
   }
 } 

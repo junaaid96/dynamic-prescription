@@ -240,13 +240,15 @@
           
           <div class="editor-group">
             <label>Content</label>
-            <textarea 
-              #contentTextArea
-              [(ngModel)]="selectedSection.content" 
-              rows="4" 
-              class="content-textarea" 
-              placeholder="Enter section content..." 
-              (mouseup)="onTextAreaMouseUp($event, contentTextArea, selectedSection.content, 'body')"></textarea>
+            <app-tinymce-editor
+              [(ngModel)]="selectedSection.content"
+              [placeholder]="'Enter section content...'"
+              [height]="150"
+              [toolbar]="'undo redo | bold italic underline | fontsize forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | link'"
+              [menubar]="false"
+              [statusbar]="false"
+              [resize]="true"
+            ></app-tinymce-editor>
           </div>
 
           <div class="editor-group">
@@ -277,43 +279,7 @@
             </div>
           </div>
 
-          <div class="editor-group">
-            <label>Style</label>
-            <div class="style-controls">
-              <div class="style-input">
-                <label>Font Size (px)</label>
-                <input type="number" [(ngModel)]="selectedSection.style.fontSize" min="8" max="24" step="1">
-              </div>
-              <div class="style-input">
-                <label>Text Align</label>
-                <select [(ngModel)]="selectedSection.style.textAlign">
-                  <option value="left">Left</option>
-                  <option value="center">Center</option>
-                  <option value="right">Right</option>
-                </select>
-              </div>
-              <div class="style-input">
-                <label>Font Weight</label>
-                <select [(ngModel)]="selectedSection.style.fontWeight">
-                  <option value="normal">Regular</option>
-                  <option value="bold">Bold</option>
-                  <option value="italic">Italic</option>
-                </select>
-              </div>
-              <div class="style-input">
-                <label>Font Color</label>
-                <input type="color" [(ngModel)]="selectedSection.style.fontColor">
-              </div>
-              <div class="style-input">
-                <label>Padding (px)</label>
-                <input type="number" [(ngModel)]="selectedSection.style.padding" min="0" max="30" step="1">
-              </div>
-              <div class="style-input">
-                <label>Margin (px)</label>
-                <input type="number" [(ngModel)]="selectedSection.style.margin" min="0" max="20" step="1">
-              </div>
-            </div>
-          </div>
+          <!-- Style controls removed - TinyMCE handles all text formatting -->
         </div>
       </div>
 
@@ -489,51 +455,18 @@
                 <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
               </div>
 
-              <!-- Simple textarea for header editing -->
-              <textarea
-                #headerTextArea
+              <!-- TinyMCE editor for header editing -->
+              <app-tinymce-editor
                 [(ngModel)]="col.content"
-                class="simple-text-editor"
-                rows="6"
                 [placeholder]="'Enter header content for column ' + (i + 1)"
-                (mouseup)="onTextAreaMouseUp($event, headerTextArea, col.content, 'header', i)"
-              ></textarea>
+                [height]="120"
+                [toolbar]="'undo redo | bold italic underline | fontsize forecolor | alignleft aligncenter alignright | bullist numlist'"
+                [menubar]="false"
+                [statusbar]="false"
+                [resize]="false"
+              ></app-tinymce-editor>
 
-              <!-- Header Style Controls -->
-              <div class="style-controls">
-                <div class="style-input">
-                  <label>Font Size (px)</label>
-                  <input type="number" [(ngModel)]="col.style.fontSize" min="8" max="24" step="1">
-                </div>
-                <div class="style-input">
-                  <label>Text Align</label>
-                  <select [(ngModel)]="col.style.textAlign">
-                    <option value="left">Left</option>
-                    <option value="center">Center</option>
-                    <option value="right">Right</option>
-                  </select>
-                </div>
-                <div class="style-input">
-                  <label>Font Weight</label>
-                  <select [(ngModel)]="col.style.fontWeight">
-                    <option value="normal">Regular</option>
-                    <option value="bold">Bold</option>
-                    <option value="italic">Italic</option>
-                  </select>
-                </div>
-                <div class="style-input">
-                  <label>Font Color</label>
-                  <input type="color" [(ngModel)]="col.style.fontColor">
-                </div>
-                <div class="style-input">
-                  <label>Padding (px)</label>
-                  <input type="number" [(ngModel)]="col.style.padding" min="0" max="30" step="1">
-                </div>
-                <div class="style-input">
-                  <label>Margin (px)</label>
-                  <input type="number" [(ngModel)]="col.style.margin" min="0" max="20" step="1">
-                </div>
-              </div>
+              <!-- Header style controls removed - TinyMCE handles all formatting -->
             </div>
           </div>
         </div>
@@ -547,51 +480,18 @@
                 <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
               </div>
 
-              <!-- Simple textarea for footer editing -->
-              <textarea
-                #footerTextArea
+              <!-- TinyMCE editor for footer editing -->
+              <app-tinymce-editor
                 [(ngModel)]="col.content"
-                class="simple-text-editor"
-                rows="6"
                 [placeholder]="'Enter footer content for column ' + (i + 1)"
-                (mouseup)="onTextAreaMouseUp($event, footerTextArea, col.content, 'footer', i)"
-              ></textarea>
+                [height]="120"
+                [toolbar]="'undo redo | bold italic underline | fontsize forecolor | alignleft aligncenter alignright | bullist numlist'"
+                [menubar]="false"
+                [statusbar]="false"
+                [resize]="false"
+              ></app-tinymce-editor>
 
-              <!-- Footer Style Controls -->
-              <div class="style-controls">
-                <div class="style-input">
-                  <label>Font Size (px)</label>
-                  <input type="number" [(ngModel)]="col.style.fontSize" min="8" max="24" step="1">
-                </div>
-                <div class="style-input">
-                  <label>Text Align</label>
-                  <select [(ngModel)]="col.style.textAlign">
-                    <option value="left">Left</option>
-                    <option value="center">Center</option>
-                    <option value="right">Right</option>
-                  </select>
-                </div>
-                <div class="style-input">
-                  <label>Font Weight</label>
-                  <select [(ngModel)]="col.style.fontWeight">
-                    <option value="normal">Regular</option>
-                    <option value="bold">Bold</option>
-                    <option value="italic">Italic</option>
-                  </select>
-                </div>
-                <div class="style-input">
-                  <label>Font Color</label>
-                  <input type="color" [(ngModel)]="col.style.fontColor">
-                </div>
-                <div class="style-input">
-                  <label>Padding (px)</label>
-                  <input type="number" [(ngModel)]="col.style.padding" min="0" max="30" step="1">
-                </div>
-                <div class="style-input">
-                  <label>Margin (px)</label>
-                  <input type="number" [(ngModel)]="col.style.margin" min="0" max="20" step="1">
-                </div>
-              </div>
+              <!-- Footer style controls removed - TinyMCE handles all formatting -->
             </div>
           </div>
         </div>
@@ -661,14 +561,7 @@
                                     <div class="header-area" *ngIf="config.headerHeight > 0" [style.height.px]="layout.headerHeight">
                     <div class="header-columns">
                       <div *ngFor="let col of headerColumns" class="header-column" 
-                           [style.width.%]="col.width"
-                           [style.font-size.px]="col.style.fontSize"
-                           [style.font-weight]="col.style.fontWeight"
-                           [style.font-style]="col.style.fontWeight === 'italic' ? 'italic' : 'normal'"
-                           [style.color]="col.style.fontColor"
-                           [style.text-align]="col.style.textAlign"
-                           [style.padding.px]="col.style.padding"
-                           [style.margin.px]="col.style.margin">
+                           [style.width.%]="col.width">
                         <div [innerHTML]="convertNewlinesToHtml(col.content) | safeHtml"></div>
                       </div>
                     </div>
@@ -682,19 +575,8 @@
                          [style.top.%]="section.position.y"
                          [style.width.%]="section.size.width"
                          [style.height.%]="section.size.height"
-                         [style.font-size.px]="section.style.fontSize"
-                         [style.font-weight]="section.style.fontWeight"
-                         [style.font-style]="section.style.fontWeight === 'italic' ? 'italic' : 'normal'"
-                         [style.color]="section.style.fontColor"
-                         [style.text-align]="section.style.textAlign"
-                         [style.padding.px]="section.style.padding"
-                         [style.margin.px]="section.style.margin"
                          (click)="selectBodySection(section)">
-                      <div class="section-content" 
-                           [style.font-size.px]="section.style.fontSize"
-                           [style.font-weight]="section.style.fontWeight"
-                           [style.font-style]="section.style.fontWeight === 'italic' ? 'italic' : 'normal'"
-                           [style.color]="section.style.fontColor">
+                      <div class="section-content">
                         <div [innerHTML]="section.content | safeHtml"></div>
                       </div>
                     </div>
@@ -702,14 +584,7 @@
                                     <div class="footer-area" *ngIf="config.footerHeight > 0" [style.height.px]="layout.footerHeight">
                     <div class="footer-columns">
                       <div *ngFor="let col of footerColumns" class="footer-column" 
-                           [style.width.%]="col.width"
-                           [style.font-size.px]="col.style.fontSize"
-                           [style.font-weight]="col.style.fontWeight"
-                           [style.font-style]="col.style.fontWeight === 'italic' ? 'italic' : 'normal'"
-                           [style.color]="col.style.fontColor"
-                           [style.text-align]="col.style.textAlign"
-                           [style.padding.px]="col.style.padding"
-                           [style.margin.px]="col.style.margin">
+                           [style.width.%]="col.width">
                         <div [innerHTML]="convertNewlinesToHtml(col.content) | safeHtml"></div>
                       </div>
                     </div>
@@ -744,14 +619,15 @@
         </div>
         <div class="form-group">
           <label for="settingDescription">Description (Optional)</label>
-          <textarea
-            id="settingDescription"
+          <app-tinymce-editor
             [(ngModel)]="newSettingDescription"
-            placeholder="Enter a description for this setting"
-            class="form-textarea"
-            rows="3"
-            maxlength="200"
-          ></textarea>
+            [placeholder]="'Enter a description for this setting'"
+            [height]="100"
+            [toolbar]="'undo redo | fontselect fontsize | bold italic underline | forecolor'"
+            [menubar]="false"
+            [statusbar]="false"
+            [resize]="false"
+          ></app-tinymce-editor>
         </div>
         <div class="setting-preview">
           <h4>📋 What will be saved:</h4>
@@ -867,11 +743,5 @@
     </div>
   </div>
 
-  <!-- TinyMCE editor modals removed - using simple text editing now -->
-  
-  <!-- Text formatting toolbar -->
-  <app-text-format-toolbar 
-    [editorElement]="currentTextSelection?.targetElement"
-    (formatText)="applyTextFormat($event)">
-  </app-text-format-toolbar>
+  <!-- TinyMCE editors now handle all rich text formatting -->
 </div> 

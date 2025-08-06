@@ -6,7 +6,6 @@ import { EditorModule } from '@tinymce/tinymce-angular';
 import { AppComponent } from './app.component';
 import { ComprehensiveLayoutComponent } from './components/comprehensive-layout.component';
 import { TinyMCEEditorComponent } from './components/tinymce-editor.component';
-import { TextFormatToolbarComponent } from './components/text-format-toolbar.component';
 import { SafeHtmlPipe } from './safe-html.pipe';
 import { HtmlParsingService } from './html-parsing.service';
 
@@ -15,7 +14,6 @@ import { HtmlParsingService } from './html-parsing.service';
     AppComponent,
     ComprehensiveLayoutComponent,
     TinyMCEEditorComponent,
-    TextFormatToolbarComponent,
     SafeHtmlPipe
   ],
   imports: [

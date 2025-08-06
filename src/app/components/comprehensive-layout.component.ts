@@ -1,12 +1,11 @@
-import { Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { PdfExportService } from '../pdf-export.service';
 import { Section, SectionColumn } from '../section.model';
 import { SettingsService, SavedSetting } from '../settings.service';
 import { HtmlContentService } from '../html-content.service';
 import { ValidationService } from '../validation.service';
 import { ResponsiveService, ScreenSize } from '../responsive.service';
-import { TextSelectionData } from '../models/text-selection.model';
-import { TextFormatToolbarComponent } from './text-format-toolbar.component';
+// TinyMCE handles all text formatting - removed text selection and formatting imports
 import { HtmlParsingService } from '../html-parsing.service';
 import { Subscription } from 'rxjs';
 
@@ -80,12 +79,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
   // Make Math available in template
   Math = Math;
   
-  // Text formatting
-  @ViewChild(TextFormatToolbarComponent) textFormatToolbar!: TextFormatToolbarComponent;
-  @ViewChildren('contentTextArea') contentTextAreas!: QueryList<ElementRef<HTMLTextAreaElement>>;
-  @ViewChildren('headerTextArea') headerTextAreas!: QueryList<ElementRef<HTMLTextAreaElement>>;
-  @ViewChildren('footerTextArea') footerTextAreas!: QueryList<ElementRef<HTMLTextAreaElement>>;
-  currentTextSelection: TextSelectionData | null = null;
+  // TinyMCE editors handle all text formatting
 
   config: LayoutConfig = {
     pageType: 'A4',
@@ -1234,87 +1228,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
     this.bodySections = this.bodySections.map(section => this.validateSectionValues(section));
   }
   
-  onTextAreaMouseUp(event: MouseEvent, textarea: HTMLTextAreaElement, content: string, type: 'body' | 'header' | 'footer', index?: number): void {
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed && textarea.selectionStart !== textarea.selectionEnd) {
-      this.currentTextSelection = {
-        selectedText: textarea.value.substring(textarea.selectionStart, textarea.selectionEnd),
-        startIndex: textarea.selectionStart,
-        endIndex: textarea.selectionEnd,
-        targetElement: textarea
-      };
-
-      // Set the editor element for the toolbar
-      setTimeout(() => {
-        if (this.textFormatToolbar) {
-          this.textFormatToolbar.editorElement = textarea;
-          this.textFormatToolbar.checkForSelection();
-        }
-      }, 10);
-    } else {
-      this.currentTextSelection = null;
-    }
-  }
-
-  applyTextFormat(format: {format: string, value?: string}): void {
-    if (!this.currentTextSelection) return;
-    
-    const { targetElement, startIndex, endIndex, selectedText } = this.currentTextSelection;
-    const fullText = targetElement.value;
-    let formattedText = '';
-
-    // Apply formatting based on format type
-    switch(format.format) {
-      case 'bold':
-        formattedText = `<strong>${selectedText}</strong>`;
-        break;
-      case 'italic':
-        formattedText = `<em>${selectedText}</em>`;
-        break;
-      case 'color':
-        if (format.value) {
-          formattedText = `<span style="color:${format.value}">${selectedText}</span>`;
-        }
-        break;
-      default:
-        return;
-    }
-
-    // Replace the text in the textarea
-    const newText = fullText.substring(0, startIndex) + formattedText + fullText.substring(endIndex);
-    
-    // Clean and sanitize the HTML to ensure it's valid
-    const cleanedHtml = this.htmlParsingService.cleanAndPreserveHtml(newText);
-    
-    // Update the textarea value
-    targetElement.value = cleanedHtml;
-    
-    // Trigger change detection
-    const event = new Event('input', { bubbles: true });
-    targetElement.dispatchEvent(event);
-    
-    // Update the model
-    if (targetElement.classList.contains('content-textarea') && this.selectedSection) {
-      this.selectedSection.content = cleanedHtml;
-    } else if (targetElement.classList.contains('simple-text-editor')) {
-      // For header/footer columns, Angular's two-way binding should handle this
-      // but we can manually check and update if needed
-      const headerTextareas = this.headerTextAreas.toArray();
-      const footerTextareas = this.footerTextAreas.toArray();
-      
-      // Check if it's a header textarea
-      const headerIndex = headerTextareas.findIndex(item => item.nativeElement === targetElement);
-      if (headerIndex >= 0 && this.headerColumns[headerIndex]) {
-        this.headerColumns[headerIndex].content = cleanedHtml;
-      }
-      
-      // Check if it's a footer textarea
-      const footerIndex = footerTextareas.findIndex(item => item.nativeElement === targetElement);
-      if (footerIndex >= 0 && this.footerColumns[footerIndex]) {
-        this.footerColumns[footerIndex].content = cleanedHtml;
-      }
-    }
-  }
+  // Text formatting methods removed - TinyMCE handles all formatting
 
 
 } 

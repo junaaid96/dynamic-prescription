@@ -542,45 +542,22 @@
   letter-spacing: 0.05em;
 }
 
-.content-textarea {
-  width: 100%;
-  padding: 0.25rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.375rem;
-  font-size: 0.75rem;
-  resize: vertical;
-  min-height: 40px;
-  background: rgba(255, 255, 255, 0.9);
-  transition: all 0.3s ease;
-  backdrop-filter: blur(5px);
-}
-
-.content-textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  transform: translateY(-1px);
-}
-
 .position-controls,
-.size-controls,
-.style-controls {
+.size-controls {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.375rem;
 }
 
 .position-input,
-.size-input,
-.style-input {
+.size-input {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
 }
 
 .position-input label,
-.size-input label,
-.style-input label {
+.size-input label {
   font-size: 0.625rem;
   font-weight: 600;
   color: #6b7280;
@@ -589,9 +566,7 @@
 }
 
 .position-input input,
-.size-input input,
-.style-input input,
-.style-input select {
+.size-input input {
   padding: 0.125rem;
   border: 2px solid #e5e7eb;
   border-radius: 0.375rem;
@@ -601,9 +576,7 @@
 }
 
 .position-input input:focus,
-.size-input input:focus,
-.style-input input:focus,
-.style-input select:focus {
+.size-input input:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -891,25 +864,7 @@
   margin-bottom: 0.125rem;
 }
 
-.column-content-textarea {
-  padding: 0.125rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.375rem;
-  font-size: 0.625rem;
-  resize: vertical;
-  min-height: 25px;
-  max-height: none;
-  background: rgba(255, 255, 255, 0.9);
-  transition: all 0.3s ease;
-  backdrop-filter: blur(5px);
-}
 
-.column-content-textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  transform: translateY(-1px);
-}
 
 /* Column Header with Actions */
 .column-header {
@@ -1262,7 +1217,7 @@
 
 .section-content {
   padding: 0.375rem;
-  font-size: inherit; /* Inherit font size from parent body-section-element */
+  font-size: 10pt; /* Default font size 10pt */
   line-height: 1.3;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -1272,34 +1227,88 @@
   height: 100%;
   width: 100%;
   box-sizing: border-box;
+  font-weight: 400; /* Normal font weight by default */
 }
 
-/* Simple text editor for header and footer */
-.simple-text-editor {
-  width: 100%;
-  padding: 0.5rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.375rem;
-  font-size: 0.75rem;
+/* Ensure TinyMCE formatting is properly displayed in preview */
+.section-content strong,
+.section-content b {
+  font-weight: 700 !important;
+}
+
+.section-content em,
+.section-content i {
+  font-style: italic !important;
+}
+
+.section-content u {
+  text-decoration: underline !important;
+}
+
+.header-column strong,
+.header-column b,
+.footer-column strong,
+.footer-column b {
+  font-weight: 700 !important;
+}
+
+.header-column em,
+.header-column i,
+.footer-column em,
+.footer-column i {
+  font-style: italic !important;
+}
+
+.header-column u,
+.footer-column u {
+  text-decoration: underline !important;
+}
+
+/* Set normal font weight and size for header and footer columns */
+.header-column,
+.footer-column {
+  font-weight: 400; /* Normal font weight by default */
+  font-size: 10pt; /* Default font size 10pt */
+}
+
+/* Allow TinyMCE inline styles to work properly */
+.section-content span,
+.header-column span,
+.footer-column span {
+  /* Let inline styles take precedence */
+}
+
+/* Ensure TinyMCE font elements work with all attributes */
+.section-content font,
+.header-column font,
+.footer-column font {
   font-family: inherit;
-  line-height: 1.4;
-  color: #1e293b;
-  background: rgba(255, 255, 255, 0.95);
-  resize: vertical;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
 }
 
-.simple-text-editor:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  transform: translateY(-1px);
+/* Support TinyMCE font size and family styling */
+.section-content *[style*="font-size"],
+.header-column *[style*="font-size"],
+.footer-column *[style*="font-size"] {
+  /* Allow font-size from inline styles */
 }
 
-.simple-text-editor::placeholder {
-  color: #9ca3af;
-  font-style: italic;
+.section-content *[style*="font-family"],
+.header-column *[style*="font-family"],
+.footer-column *[style*="font-family"] {
+  /* Allow font-family from inline styles */
+}
+
+/* Ensure font tags from TinyMCE work */
+.section-content font[size],
+.header-column font[size],
+.footer-column font[size] {
+  /* Support HTML font size attributes */
+}
+
+.section-content font[face],
+.header-column font[face],
+.footer-column font[face] {
+  /* Support HTML font face attributes */
 }
 
 /* Responsive Design */
@@ -1341,8 +1350,7 @@
   }
 
   .position-controls,
-  .size-controls,
-  .style-controls {
+  .size-controls {
     grid-template-columns: 1fr;
   }
   
@@ -1425,10 +1433,7 @@
     height: 1.5rem;
   }
 
-  .column-content-textarea {
-    min-height: 25px;
-    max-height: none;
-  }
+
 
   .body-section-element {
     min-width: 50px;
@@ -1448,37 +1453,48 @@
     align-items: flex-start;
     gap: 0.25rem;
   }
+
+  /* Modal styles */
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .modal-large {
+    width: 98%;
+  }
+  
+  .settings-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-box {
+    min-width: auto;
+  }
+  
+  .settings-buttons {
+    justify-content: center;
+  }
+  
+  .setting-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .setting-meta {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .setting-actions {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
 } 
 
-/* Enhanced Print Styles */
-@media print {
-  .comprehensive-layout {
-    background: white;
-  }
-
-  .config-panel,
-  .preview-panel h3,
-  .column-layout-controls,
-  .actions-panel,
-  .shortcuts-help {
-    display: none;
-  }
-
-  .preview-panel {
-    padding: 0;
-  }
-
-  .layout-diagram {
-    box-shadow: none;
-    border: none;
-    padding: 0;
-  }
-
-  .total-page-container {
-    border: 1px solid #000;
-    box-shadow: none;
-  }
-}
+/* Duplicate print styles consolidated into main print media query above */
 
 /* Enhanced Accessibility */
 @media (prefers-reduced-motion: reduce) {
@@ -1628,8 +1644,7 @@
   margin-bottom: 0.5rem;
 }
 
-.form-input,
-.form-textarea {
+.form-input {
   width: 100%;
   padding: 0.75rem;
   border: 2px solid #e5e7eb;
@@ -1639,17 +1654,13 @@
   background: white;
 }
 
-.form-input:focus,
-.form-textarea:focus {
+.form-input:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-textarea {
-  resize: vertical;
-  min-height: 80px;
-}
+
 
 /* Button Styles */
 .btn-primary,
@@ -1929,43 +1940,4 @@
   margin-bottom: 1.5rem;
 }
 
-/* Responsive Modal */
-@media (max-width: 768px) {
-  .modal-content {
-    width: 95%;
-    margin: 1rem;
-  }
-  
-  .modal-large {
-    width: 98%;
-  }
-  
-  .settings-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .search-box {
-    min-width: auto;
-  }
-  
-  .settings-buttons {
-    justify-content: center;
-  }
-  
-  .setting-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-  
-  .setting-meta {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-  
-  .setting-actions {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-} 
+/* Duplicate mobile styles consolidated into main mobile media query above */ 
