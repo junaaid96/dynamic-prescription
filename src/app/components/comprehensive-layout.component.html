@@ -240,7 +240,15 @@
           
           <div class="editor-group">
             <label>Content</label>
-            <textarea [(ngModel)]="selectedSection.content" rows="4" class="content-textarea" placeholder="Enter section content..."></textarea>
+            <app-tinymce-editor
+              [(ngModel)]="selectedSection.content"
+              [placeholder]="'Enter section content...'"
+              [height]="150"
+              [toolbar]="'undo redo | bold italic underline | fontsize forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | link'"
+              [menubar]="false"
+              [statusbar]="false"
+              [resize]="true"
+            ></app-tinymce-editor>
           </div>
 
           <div class="editor-group">
@@ -266,36 +274,12 @@
               </div>
               <div class="size-input">
                 <label>Height (%)</label>
-                <input type="number" [(ngModel)]="selectedSection.size.height" min="5" max="80" step="1">
+                <input type="number" [(ngModel)]="selectedSection.size.height" min="5" max="95" step="1">
               </div>
             </div>
           </div>
 
-          <div class="editor-group">
-            <label>Style</label>
-            <div class="style-controls">
-              <div class="style-input">
-                <label>Font Size (px)</label>
-                <input type="number" [(ngModel)]="selectedSection.style.fontSize" min="8" max="24" step="1">
-              </div>
-              <div class="style-input">
-                <label>Text Align</label>
-                <select [(ngModel)]="selectedSection.style.textAlign">
-                  <option value="left">Left</option>
-                  <option value="center">Center</option>
-                  <option value="right">Right</option>
-                </select>
-              </div>
-              <div class="style-input">
-                <label>Padding (px)</label>
-                <input type="number" [(ngModel)]="selectedSection.style.padding" min="0" max="30" step="1">
-              </div>
-              <div class="style-input">
-                <label>Margin (px)</label>
-                <input type="number" [(ngModel)]="selectedSection.style.margin" min="0" max="20" step="1">
-              </div>
-            </div>
-          </div>
+          <!-- Style controls removed - TinyMCE handles all text formatting -->
         </div>
       </div>
 
@@ -308,12 +292,23 @@
           <button
             (click)="exportToPDF()"
             class="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 mb-3"
-            title="Export current layout to PDF (Ctrl+P)"
+            title="Export without borders using clean method"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
-            Export to PDF
+            Export Clean PDF
+          </button>
+          
+          <button
+            (click)="exportToPDFWithCanvas()"
+            class="w-full bg-orange-600 text-white px-4 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            title="Export exactly as shown (may include visual borders)"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            Export Visual PDF
           </button>
         </div>
 
@@ -322,12 +317,34 @@
           <button
             (click)="saveConfiguration()"
             class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 mb-3"
-            title="Save current configuration (Ctrl+S)"
+            title="Save current configuration to file (Ctrl+S)"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"></path>
             </svg>
-            Save Configuration
+            Save to File
+          </button>
+          
+          <button
+            (click)="openSaveSettingsModal()"
+            class="w-full bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            title="Save current configuration to settings"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+            </svg>
+            Save Setting
+          </button>
+          
+          <button
+            (click)="openLoadSettingsModal()"
+            class="w-full bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            title="Load saved settings"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            Load Settings
           </button>
           
           <div>
@@ -341,12 +358,12 @@
             <button
               (click)="fileInput.click()"
               class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 mb-3"
-              title="Load saved configuration"
+              title="Load configuration from file"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
               </svg>
-              Load Configuration
+              Load from File
             </button>
           </div>
 
@@ -401,7 +418,7 @@
               <span class="column-label">Column 1</span>
               <div class="column-control">
                 <button (click)="updateColumnLayout('column1', Math.max(0, config.columnLayout.column1 - 5))" title="Decrease width">-</button>
-                <input type="number" [(ngModel)]="config.columnLayout.column1" (input)="normalizeColumnWidths()" min="0" max="100">
+                <input type="number" [(ngModel)]="config.columnLayout.column1" (input)="updateColumnLayout('column1', config.columnLayout.column1)" (change)="updateColumnLayout('column1', config.columnLayout.column1)" min="0" max="100">
                 <button (click)="updateColumnLayout('column1', Math.min(100, config.columnLayout.column1 + 5))" title="Increase width">+</button>
               </div>
             </div>
@@ -409,7 +426,7 @@
               <span class="column-label">Column 2</span>
               <div class="column-control">
                 <button (click)="updateColumnLayout('column2', Math.max(0, config.columnLayout.column2 - 5))" title="Decrease width">-</button>
-                <input type="number" [(ngModel)]="config.columnLayout.column2" (input)="normalizeColumnWidths()" min="0" max="100">
+                <input type="number" [(ngModel)]="config.columnLayout.column2" (input)="updateColumnLayout('column2', config.columnLayout.column2)" (change)="updateColumnLayout('column2', config.columnLayout.column2)" min="0" max="100">
                 <button (click)="updateColumnLayout('column2', Math.min(100, config.columnLayout.column2 + 5))" title="Increase width">+</button>
               </div>
             </div>
@@ -417,7 +434,7 @@
               <span class="column-label">Column 3</span>
               <div class="column-control">
                 <button (click)="updateColumnLayout('column3', Math.max(0, config.columnLayout.column3 - 5))" title="Decrease width">-</button>
-                <input type="number" [(ngModel)]="config.columnLayout.column3" (input)="normalizeColumnWidths()" min="0" max="100">
+                <input type="number" [(ngModel)]="config.columnLayout.column3" (input)="updateColumnLayout('column3', config.columnLayout.column3)" (change)="updateColumnLayout('column3', config.columnLayout.column3)" min="0" max="100">
                 <button (click)="updateColumnLayout('column3', Math.min(100, config.columnLayout.column3 + 5))" title="Increase width">+</button>
               </div>
             </div>
@@ -434,14 +451,22 @@
           <h4>📝 Header Content</h4>
           <div class="column-content-grid">
             <div *ngFor="let col of headerColumns; let i = index" class="column-content-item">
-              <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
-              <textarea 
-                [(ngModel)]="col.content" 
-                (input)="updateHeaderColumnContent(i, col.content)"
-                rows="1"
-                class="column-content-textarea"
+              <div class="column-header">
+                <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
+              </div>
+
+              <!-- TinyMCE editor for header editing -->
+              <app-tinymce-editor
+                [(ngModel)]="col.content"
                 [placeholder]="'Enter header content for column ' + (i + 1)"
-              ></textarea>
+                [height]="120"
+                [toolbar]="'undo redo | bold italic underline | fontsize forecolor | alignleft aligncenter alignright | bullist numlist'"
+                [menubar]="false"
+                [statusbar]="false"
+                [resize]="false"
+              ></app-tinymce-editor>
+
+              <!-- Header style controls removed - TinyMCE handles all formatting -->
             </div>
           </div>
         </div>
@@ -451,14 +476,22 @@
           <h4>📝 Footer Content</h4>
           <div class="column-content-grid">
             <div *ngFor="let col of footerColumns; let i = index" class="column-content-item">
-              <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
-              <textarea 
-                [(ngModel)]="col.content" 
-                (input)="updateFooterColumnContent(i, col.content)"
-                rows="1"
-                class="column-content-textarea"
+              <div class="column-header">
+                <label>Column {{ i + 1 }} ({{ col.width }}%)</label>
+              </div>
+
+              <!-- TinyMCE editor for footer editing -->
+              <app-tinymce-editor
+                [(ngModel)]="col.content"
                 [placeholder]="'Enter footer content for column ' + (i + 1)"
-              ></textarea>
+                [height]="120"
+                [toolbar]="'undo redo | bold italic underline | fontsize forecolor | alignleft aligncenter alignright | bullist numlist'"
+                [menubar]="false"
+                [statusbar]="false"
+                [resize]="false"
+              ></app-tinymce-editor>
+
+              <!-- Footer style controls removed - TinyMCE handles all formatting -->
             </div>
           </div>
         </div>
@@ -525,15 +558,15 @@
                    [style.width.px]="layout.totalWidth - layout.leftMargin - layout.rightMargin - layout.leftPadding - layout.rightPadding"
                    [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding">
                 <div class="area-content">
-                  <div class="header-area" *ngIf="config.headerHeight > 0" [style.height.px]="layout.headerHeight">
+                                    <div class="header-area" *ngIf="config.headerHeight > 0" [style.height.px]="layout.headerHeight">
                     <div class="header-columns">
-                      <div *ngFor="let col of headerColumns" class="header-column" [style.width.%]="col.width">
-                        {{ col.content }}
+                      <div *ngFor="let col of headerColumns" class="header-column" 
+                           [style.width.%]="col.width">
+                        <div [innerHTML]="convertNewlinesToHtml(col.content) | safeHtml"></div>
                       </div>
                     </div>
                   </div>
-                  <div class="body-area" [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding - layout.headerHeight - layout.footerHeight"
-                       (dragover)="onDragOver($event)" (drop)="onDrop($event)">
+                  <div class="body-area" [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding - layout.headerHeight - layout.footerHeight">
                     <!-- Body Sections -->
                     <div *ngFor="let section of bodySections" 
                          class="body-section-element"
@@ -542,26 +575,17 @@
                          [style.top.%]="section.position.y"
                          [style.width.%]="section.size.width"
                          [style.height.%]="section.size.height"
-                         [style.font-size.px]="section.style.fontSize"
-                         [style.text-align]="section.style.textAlign"
-                         [style.padding.px]="section.style.padding"
-                         [style.margin.px]="section.style.margin"
-                         draggable="true"
-                         (dragstart)="onDragStart($event, section)"
                          (click)="selectBodySection(section)">
-                      <div class="section-header">
-                        <span>{{ section.name }}</span>
-                        <div class="drag-handle">⋮</div>
-                      </div>
                       <div class="section-content">
-                        {{ section.content }}
+                        <div [innerHTML]="section.content | safeHtml"></div>
                       </div>
                     </div>
                   </div>
-                  <div class="footer-area" *ngIf="config.footerHeight > 0" [style.height.px]="layout.footerHeight">
+                                    <div class="footer-area" *ngIf="config.footerHeight > 0" [style.height.px]="layout.footerHeight">
                     <div class="footer-columns">
-                      <div *ngFor="let col of footerColumns" class="footer-column" [style.width.%]="col.width">
-                        {{ col.content }}
+                      <div *ngFor="let col of footerColumns" class="footer-column" 
+                           [style.width.%]="col.width">
+                        <div [innerHTML]="convertNewlinesToHtml(col.content) | safeHtml"></div>
                       </div>
                     </div>
                   </div>
@@ -573,4 +597,151 @@
       </div>
     </div>
   </div>
+
+  <!-- Save Settings Modal -->
+  <div *ngIf="showSettingsModal" class="modal-overlay" (click)="closeSaveSettingsModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>💾 Save Setting</h3>
+        <button (click)="closeSaveSettingsModal()" class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="settingName">Setting Name *</label>
+          <input
+            id="settingName"
+            type="text"
+            [(ngModel)]="newSettingName"
+            placeholder="Enter a name for this setting"
+            class="form-input"
+            maxlength="50"
+          >
+        </div>
+        <div class="form-group">
+          <label for="settingDescription">Description (Optional)</label>
+          <app-tinymce-editor
+            [(ngModel)]="newSettingDescription"
+            [placeholder]="'Enter a description for this setting'"
+            [height]="100"
+            [toolbar]="'undo redo | fontselect fontsize | bold italic underline | forecolor'"
+            [menubar]="false"
+            [statusbar]="false"
+            [resize]="false"
+          ></app-tinymce-editor>
+        </div>
+        <div class="setting-preview">
+          <h4>📋 What will be saved:</h4>
+          <ul>
+            <li>Page layout configuration</li>
+            <li>All content sections</li>
+            <li>Header and footer content</li>
+            <li>Column layout settings</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button (click)="closeSaveSettingsModal()" class="btn-secondary">Cancel</button>
+        <button (click)="saveCurrentSetting()" class="btn-primary" [disabled]="!newSettingName.trim()">
+          Save Setting
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Settings Modal -->
+  <div *ngIf="showLoadSettingsModal" class="modal-overlay" (click)="closeLoadSettingsModal()">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>📂 Load Settings</h3>
+        <button (click)="closeLoadSettingsModal()" class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- Search and Actions -->
+        <div class="settings-actions">
+          <div class="search-box">
+            <input
+              type="text"
+              [(ngModel)]="searchQuery"
+              placeholder="Search settings..."
+              class="search-input"
+            >
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+          <div class="settings-buttons">
+            <button (click)="exportAllSettings()" class="btn-secondary" title="Export all settings">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Export All
+            </button>
+            <input
+              type="file"
+              accept=".json"
+              (change)="importSettings($event)"
+              style="display: none"
+              #importFileInput
+            />
+            <button (click)="importFileInput.click()" class="btn-secondary" title="Import settings">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+              </svg>
+              Import
+            </button>
+            <button (click)="clearAllSettings()" class="btn-danger" title="Clear all settings">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+              Clear All
+            </button>
+          </div>
+        </div>
+
+        <!-- Settings List -->
+        <div class="settings-list" *ngIf="getFilteredSettings().length > 0; else noSettings">
+          <div *ngFor="let setting of getFilteredSettings()" class="setting-item">
+            <div class="setting-info" (click)="loadSetting(setting)">
+              <div class="setting-header">
+                <h4 class="setting-name">{{ setting.name }}</h4>
+                <span class="setting-date">{{ formatDate(setting.timestamp) }}</span>
+              </div>
+              <p class="setting-description" *ngIf="setting.description">{{ setting.description }}</p>
+              <div class="setting-meta">
+                <span class="setting-version">v{{ setting.version }}</span>
+                <span class="setting-id">ID: {{ setting.id }}</span>
+              </div>
+            </div>
+            <div class="setting-actions">
+              <button (click)="loadSetting(setting)" class="btn-load" title="Load this setting">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                Load
+              </button>
+              <button (click)="deleteSetting(setting)" class="btn-delete" title="Delete this setting">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Settings Template -->
+        <ng-template #noSettings>
+          <div class="no-settings">
+            <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h3>No settings found</h3>
+            <p>No saved settings match your search criteria.</p>
+            <button (click)="closeLoadSettingsModal()" class="btn-primary">Close</button>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+
+  <!-- TinyMCE editors now handle all rich text formatting -->
 </div> 
