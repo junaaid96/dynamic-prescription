@@ -294,9 +294,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Angular team for the amazing framework
 - Tailwind CSS for the utility-first styling approach
 
-## 📞 Support
-
-For support, email support@example.com or create an issue in the GitHub repository.
 
 ## 🔄 Version History
 
