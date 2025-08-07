@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { Section, SectionColumn } from './section.model';
+import { Section, SectionColumn } from '../models/section.model';
 import { HtmlContentService } from './html-content.service';
 
 @Injectable({

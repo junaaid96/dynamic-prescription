@@ -240,7 +240,12 @@
           
           <div class="editor-group">
             <label>Content</label>
+            <app-diagnosis-fields
+              *ngIf="selectedSection.type === 'diagnostic'"
+              [(ngModel)]="selectedSection.content"
+            ></app-diagnosis-fields>
             <app-tinymce-editor
+              *ngIf="selectedSection.type !== 'diagnostic'"
               [(ngModel)]="selectedSection.content"
               [placeholder]="'Enter section content...'"
               [height]="150"
@@ -287,11 +292,19 @@
       <div class="actions-panel">
         <h3>⚡ Actions</h3>
         
-        <!-- PDF Export -->
-        <div class="action-group">
+        <!-- Place the file input just before the grid for accessibility -->
+        <input
+          type="file"
+          accept=".json"
+          (change)="loadConfiguration($event)"
+          style="display: none"
+          #fileInput
+        />
+        <div class="action-buttons-grid">
+          <!-- PDF Export -->
           <button
             (click)="exportToPDF()"
-            class="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            class="action-btn action-btn-red"
             title="Export without borders using clean method"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -302,7 +315,7 @@
           
           <button
             (click)="exportToPDFWithCanvas()"
-            class="w-full bg-orange-600 text-white px-4 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            class="action-btn action-btn-orange"
             title="Export exactly as shown (may include visual borders)"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,13 +323,11 @@
             </svg>
             Export Visual PDF
           </button>
-        </div>
 
-        <!-- Save/Load Configuration -->
-        <div class="action-group">
+          <!-- Save/Load Configuration -->
           <button
             (click)="saveConfiguration()"
-            class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            class="action-btn action-btn-blue"
             title="Save current configuration to file (Ctrl+S)"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,7 +338,7 @@
           
           <button
             (click)="openSaveSettingsModal()"
-            class="w-full bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            class="action-btn action-btn-purple"
             title="Save current configuration to settings"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,7 +349,7 @@
           
           <button
             (click)="openLoadSettingsModal()"
-            class="w-full bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 mb-3"
+            class="action-btn action-btn-indigo"
             title="Load saved settings"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,30 +358,21 @@
             Load Settings
           </button>
           
-          <div>
-            <input
-              type="file"
-              accept=".json"
-              (change)="loadConfiguration($event)"
-              style="display: none"
-              #fileInput
-            />
-            <button
-              (click)="fileInput.click()"
-              class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 mb-3"
-              title="Load configuration from file"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-              </svg>
-              Load from File
-            </button>
-          </div>
+          <button
+            (click)="fileInput.click()"
+            class="action-btn action-btn-green span-2"
+            title="Load configuration from file"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            Load from File
+          </button>
 
           <!-- Reset Configuration -->
           <button
             (click)="resetToDefaults()"
-            class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+            class="action-btn action-btn-gray span-2"
             title="Reset all settings to defaults"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
