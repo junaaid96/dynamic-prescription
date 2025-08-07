@@ -6,8 +6,8 @@ import { EditorModule } from '@tinymce/tinymce-angular';
 import { AppComponent } from './app.component';
 import { ComprehensiveLayoutComponent } from './components/comprehensive-layout.component';
 import { TinyMCEEditorComponent } from './components/tinymce-editor.component';
-import { SafeHtmlPipe } from './safe-html.pipe';
-import { HtmlParsingService } from './html-parsing.service';
+import { SafeHtmlPipe } from './pipes/safe-html.pipe';
+import { HtmlParsingService } from './services/html-parsing.service';
 
 @NgModule({
   declarations: [

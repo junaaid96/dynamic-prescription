@@ -1,12 +1,12 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { PdfExportService } from '../pdf-export.service';
-import { Section, SectionColumn } from '../section.model';
-import { SettingsService, SavedSetting } from '../settings.service';
-import { HtmlContentService } from '../html-content.service';
-import { ValidationService } from '../validation.service';
-import { ResponsiveService, ScreenSize } from '../responsive.service';
+import { PdfExportService } from '../services/pdf-export.service';
+import { Section, SectionColumn } from '../models/section.model';
+import { SettingsService, SavedSetting } from '../services/settings.service';
+import { HtmlContentService } from '../services/html-content.service';
+import { ValidationService } from '../services/validation.service';
+import { ResponsiveService, ScreenSize } from '../services/responsive.service';
 // TinyMCE handles all text formatting - removed text selection and formatting imports
-import { HtmlParsingService } from '../html-parsing.service';
+import { HtmlParsingService } from '../services/html-parsing.service';
 import { Subscription } from 'rxjs';
 
 export interface LayoutConfig {

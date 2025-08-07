@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BodySection, LayoutConfig } from './components/comprehensive-layout.component';
+import { BodySection, LayoutConfig } from '../components/comprehensive-layout.component';
 
 export interface ValidationResult {
   isValid: boolean;
