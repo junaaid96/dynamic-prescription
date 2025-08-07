@@ -118,7 +118,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
       name: 'Patient Information',
       content: 'P.ID: RX-2024-001452 | Date: January 15, 2024 | Name: Sarah Johnson | Age: 34 years | Gender: Female | Department: Internal Medicine | Contact: +1 (555) 123-4567 | Address: 123 Main Street, Springfield, IL 62701',
       position: { x: 0, y: 0 },
-      size: { width: 100, height: 8 },
+      size: { width: 100, height: 10 },
       style: {
         fontSize: 11,
         fontWeight: 'normal',
@@ -132,7 +132,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
       id: 'diagnostic-1',
       type: 'diagnostic',
       name: 'Diagnosis',
-      content: 'Chief Complaints:\n• Persistent cough for 2 weeks\n• Mild fever (100.4°F)\n• Fatigue and body aches\n• Sore throat\n\nDiagnosis:\nUpper Respiratory Tract Infection (URTI)\nViral syndrome with secondary bacterial infection\n\nVital Signs:\nBP: 125/78 mmHg, HR: 82 bpm\nTemp: 100.4°F, RR: 16/min\nO2 Sat: 98% on room air\n\nNotes:\nPatient presents with classic symptoms of viral URTI.\nNo underlying comorbidities. Good general condition.\nAdvised symptomatic treatment and follow-up.',
+      content: '• Persistent cough for 2 weeks\n• Mild fever (100.4°F)\n• Fatigue and body aches\n• Sore throat\n• Upper Respiratory Tract Infection (URTI)\n• Viral syndrome with secondary bacterial infection\n• BP: 125/78 mmHg, HR: 82 bpm\n• Temp: 100.4°F, RR: 16/min\n• O2 Sat: 98% on room air\n• Patient presents with classic symptoms of viral URTI\n• No underlying comorbidities. Good general condition\n• Advised symptomatic treatment and follow-up',
       position: { x: 0, y: 10 },
       size: { width: 50, height: 90 },
       style: {
@@ -514,7 +514,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
   // Get default content for section types with realistic mock data
   private getDefaultContent(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): string {
     const defaultContent = {
-      diagnostic: 'Chief Complaints:\n• [Primary symptom]\n• [Secondary symptom]\n• [Duration and severity]\n\nDiagnosis:\n[Primary diagnosis]\n[Secondary diagnosis if applicable]\n\nVital Signs:\nBP: ___/__ mmHg, HR: __ bpm\nTemp: __°F, RR: __/min\n\nClinical Notes:\n[Examination findings]\n[Treatment plan]\n[Follow-up instructions]',
+      diagnostic: '• [Primary symptom]\n• [Secondary symptom]\n• [Duration and severity]\n• [Primary diagnosis]\n• [Secondary diagnosis if applicable]\n• BP: ___/__ mmHg, HR: __ bpm\n• Temp: __°F, RR: __/min\n• [Examination findings]\n• [Treatment plan]\n• [Follow-up instructions]',
       prescription: 'Rx\n\n1. [Medicine Name] [Strength]\n   Take [frequency] for [duration]\n   ([Instructions - e.g., after meals])\n\n2. [Medicine Name] [Strength]\n   Take [frequency] for [duration]\n   ([Instructions])\n\n3. [Medicine Name] [Strength]\n   Take [frequency] for [duration]\n   ([Instructions])\n\nGeneral Instructions:\n• Complete the full course of medication\n• Take medicines as prescribed\n• Return if symptoms persist or worsen\n• Follow-up appointment: [Date]',
       custom: 'Additional Information:\n\n[Lab Reports Required]\n[Dietary Restrictions]\n[Activity Limitations]\n[Special Precautions]\n\n[Any other relevant medical information]',
       patient: 'P.ID: [Patient ID] | Date: [Date] | Name: [Full Name] | Age: [Age] years | Gender: [Male/Female] | Department: [Department] | Contact: [Phone Number] | Address: [Complete Address]'
