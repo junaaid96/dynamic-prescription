@@ -243,10 +243,12 @@
             <app-diagnosis-fields
               *ngIf="selectedSection.type === 'diagnostic'"
               [(ngModel)]="selectedSection.content"
+              (ngModelChange)="onSectionContentChange(selectedSection)"
             ></app-diagnosis-fields>
             <app-tinymce-editor
               *ngIf="selectedSection.type !== 'diagnostic'"
               [(ngModel)]="selectedSection.content"
+              (ngModelChange)="onContentEditorChange($event)"
               [placeholder]="'Enter section content...'"
               [height]="150"
               [toolbar]="'undo redo | bold italic underline | fontsize forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | link'"
@@ -568,18 +570,47 @@
                       </div>
                     </div>
                   </div>
-                  <div class="body-area" [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding - layout.headerHeight - layout.footerHeight">
+                  <div class="body-area" 
+                       #bodyArea
+                       (mouseup)="onMouseUp($event)"
+                       (mousemove)="onMouseMove($event)"
+                       [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding - layout.headerHeight - layout.footerHeight">
                     <!-- Body Sections -->
                     <div *ngFor="let section of bodySections" 
                          class="body-section-element"
                          [class.selected]="selectedSection?.id === section.id"
+                         [class.dragging]="isDragging && selectedSection?.id === section.id"
+                         [class.resizing]="isResizing && selectedSection?.id === section.id"
                          [style.left.%]="section.position.x"
                          [style.top.%]="section.position.y"
                          [style.width.%]="section.size.width"
                          [style.height.%]="section.size.height"
-                         (click)="selectBodySection(section)">
+                         (click)="selectBodySection(section)"
+                         (mousedown)="onMouseDown($event, section)">
                       <div class="section-content">
                         <div [innerHTML]="section.content | safeHtml"></div>
+                      </div>
+                      <!-- Drag handle indicator -->
+                      <div class="drag-handle" 
+                           (mousedown)="onDragHandleMouseDown($event, section)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        </svg>
+                      </div>
+
+                      <!-- Resize handles (only show for selected sections) -->
+                      <div *ngIf="selectedSection?.id === section.id" class="resize-handles">
+                        <!-- Corner handles -->
+                        <div class="resize-handle resize-handle-nw" (mousedown)="onResizeHandleMouseDown($event, section, 'nw')"></div>
+                        <div class="resize-handle resize-handle-ne" (mousedown)="onResizeHandleMouseDown($event, section, 'ne')"></div>
+                        <div class="resize-handle resize-handle-sw" (mousedown)="onResizeHandleMouseDown($event, section, 'sw')"></div>
+                        <div class="resize-handle resize-handle-se" (mousedown)="onResizeHandleMouseDown($event, section, 'se')"></div>
+                        
+                        <!-- Edge handles -->
+                        <div class="resize-handle resize-handle-n" (mousedown)="onResizeHandleMouseDown($event, section, 'n')"></div>
+                        <div class="resize-handle resize-handle-s" (mousedown)="onResizeHandleMouseDown($event, section, 's')"></div>
+                        <div class="resize-handle resize-handle-e" (mousedown)="onResizeHandleMouseDown($event, section, 'e')"></div>
+                        <div class="resize-handle resize-handle-w" (mousedown)="onResizeHandleMouseDown($event, section, 'w')"></div>
                       </div>
                     </div>
                   </div>

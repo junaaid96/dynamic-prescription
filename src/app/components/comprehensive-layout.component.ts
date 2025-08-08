@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { PdfExportService } from '../services/pdf-export.service';
 import { Section, SectionColumn } from '../models/section.model';
 import { SettingsService, SavedSetting } from '../services/settings.service';
@@ -8,6 +8,7 @@ import { ResponsiveService, ScreenSize } from '../services/responsive.service';
 // TinyMCE handles all text formatting - removed text selection and formatting imports
 import { HtmlParsingService } from '../services/html-parsing.service';
 import { Subscription } from 'rxjs';
+import { CdkDragDrop, CdkDragMove } from '@angular/cdk/drag-drop';
 
 export interface LayoutConfig {
   pageType: 'A4' | 'A5' | 'Letter' | 'Legal' | 'Custom';
@@ -69,7 +70,7 @@ const PAPER_SIZES = {
   templateUrl: './comprehensive-layout.component.html',
   styleUrls: ['./comprehensive-layout.component.css']
 })
-export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
+export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterViewInit {
   // Convert inches to pixels (assuming 96 DPI)
   private readonly INCH_TO_PX = 96;
 
@@ -118,7 +119,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
       name: 'Patient Information',
       content: 'P.ID: RX-2024-001452 | Date: January 15, 2024 | Name: Sarah Johnson | Age: 34 years | Gender: Female | Department: Internal Medicine | Contact: +1 (555) 123-4567 | Address: 123 Main Street, Springfield, IL 62701',
       position: { x: 0, y: 0 },
-      size: { width: 100, height: 10 },
+      size: { width: 100, height: 8 }, // Will be calculated dynamically
       style: {
         fontSize: 11,
         fontWeight: 'normal',
@@ -133,8 +134,8 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
       type: 'diagnostic',
       name: 'Diagnosis',
       content: '• Persistent cough for 2 weeks\n• Mild fever (100.4°F)\n• Fatigue and body aches\n• Sore throat\n• Upper Respiratory Tract Infection (URTI)\n• Viral syndrome with secondary bacterial infection\n• BP: 125/78 mmHg, HR: 82 bpm\n• Temp: 100.4°F, RR: 16/min\n• O2 Sat: 98% on room air\n• Patient presents with classic symptoms of viral URTI\n• No underlying comorbidities. Good general condition\n• Advised symptomatic treatment and follow-up',
-      position: { x: 0, y: 10 },
-      size: { width: 50, height: 90 },
+      position: { x: 0, y: 15 },
+      size: { width: 45, height: 25 }, // Will be calculated dynamically
       style: {
         fontSize: 11,
         fontWeight: 'normal',
@@ -149,8 +150,8 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
       type: 'prescription',
       name: 'Prescription',
       content: 'Rx\n\n1. Amoxicillin 500mg\n   Take 1 capsule 3 times daily for 7 days\n   (After meals)\n\n2. Paracetamol 650mg\n   Take 1 tablet every 6-8 hours as needed\n   (For fever and pain, max 4 tablets/day)\n\n3. Dextromethorphan Syrup 15mg/5ml\n   Take 2 teaspoons 3 times daily\n   (For cough relief)\n\n4. Vitamin C 500mg\n   Take 1 tablet daily for 10 days\n   (Immune support)\n\nInstructions:\n• Complete the full course of antibiotics\n• Drink plenty of fluids (8-10 glasses/day)\n• Take adequate rest\n• Return if symptoms worsen or persist beyond 5 days\n• Avoid cold foods and smoking',
-      position: { x: 50, y: 10 },
-      size: { width: 50, height: 90 },
+      position: { x: 50, y: 15 },
+      size: { width: 45, height: 25 }, // Will be calculated dynamically
       style: {
         fontSize: 11,
         fontWeight: 'normal',
@@ -261,6 +262,22 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
   private screenSizeSubscription?: Subscription;
   currentScreenSize?: ScreenSize;
 
+  // Drag and drop properties
+  @ViewChild('bodyArea', { static: false }) bodyArea?: ElementRef;
+  isDragging = false;
+  dragStartPosition = { x: 0, y: 0 };
+  dragStartSectionPosition = { x: 0, y: 0 };
+  currentMousePosition = { x: 0, y: 0 };
+  dragOffsetX = 0;
+  dragOffsetY = 0;
+
+  // Resize properties
+  isResizing = false;
+  resizeHandle = '';
+  resizeStartPosition = { x: 0, y: 0 };
+  resizeStartSize = { width: 0, height: 0 };
+  resizeStartSectionPosition = { x: 0, y: 0 };
+
   constructor(
     private pdfExportService: PdfExportService,
     private settingsService: SettingsService,
@@ -300,6 +317,26 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
     if (this.screenSizeSubscription) {
       this.screenSizeSubscription.unsubscribe();
     }
+    
+    // Clean up drag and resize event listeners
+    this.endDrag();
+    this.endResize();
+  }
+
+  ngAfterViewInit(): void {
+    // Initialize dynamic sizing for existing sections with multiple retries
+    // to ensure all content is loaded
+    setTimeout(() => {
+      this.updateAllSectionsDynamicSize();
+    }, 100);
+    
+    setTimeout(() => {
+      this.updateAllSectionsDynamicSize();
+    }, 500);
+    
+    setTimeout(() => {
+      this.updateAllSectionsDynamicSize();
+    }, 1000);
   }
 
   private handleResponsiveLayout(screenSize: ScreenSize): void {
@@ -535,38 +572,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
   }
 
   // Body Section Management
-  addBodySection(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): void {
-    // Calculate position to avoid overlapping
-    const existingSections = this.bodySections.length;
-    const baseX = 5 + (existingSections % 2) * 50;
-    const baseY = 5 + Math.floor(existingSections / 2) * 40;
-
-    const defaultHeight = type === 'patient' ? 8 : 25; // Shorter height for patient sections
-    const defaultWidth = type === 'patient' ? 100 : 45; // Full width for patient sections
-
-    const newSection: BodySection = {
-      id: `${type}-${Date.now()}`,
-      type: type,
-      name: type.charAt(0).toUpperCase() + type.slice(1) + (type === 'patient' ? ' Information' : ''),
-      content: this.getDefaultContent(type),
-      position: { x: baseX, y: baseY },
-      size: { width: defaultWidth, height: defaultHeight },
-      style: this.getDefaultStyle()
-    };
-
-    this.bodySections.push(newSection);
-    this.selectedSection = newSection;
-  }
-
-  selectBodySection(section: BodySection): void {
-    // Validate section values before selecting
-    const validatedSection = this.validateSectionValues(section);
-    const sectionIndex = this.bodySections.findIndex(s => s.id === section.id);
-    if (sectionIndex !== -1) {
-      this.bodySections[sectionIndex] = validatedSection;
-    }
-    this.selectedSection = validatedSection;
-  }
+  // Note: addBodySection and selectBodySection methods are implemented below with drag & drop and dynamic sizing
 
   deleteBodySection(sectionId: string): void {
     this.bodySections = this.bodySections.filter(s => s.id !== sectionId);
@@ -1226,6 +1232,428 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy {
   // Apply validation to all sections
   private validateAllSections(): void {
     this.bodySections = this.bodySections.map(section => this.validateSectionValues(section));
+  }
+
+  // Custom Mouse-Based Drag and Drop Methods
+  onMouseDown(event: MouseEvent, section: BodySection): void {
+    // Don't start drag on regular section click
+    event.stopPropagation();
+    this.selectBodySection(section);
+  }
+
+  onDragHandleMouseDown(event: MouseEvent, section: BodySection): void {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    this.isDragging = true;
+    this.selectedSection = section;
+    
+    // Store initial mouse position
+    this.dragStartPosition = {
+      x: event.clientX,
+      y: event.clientY
+    };
+    
+    // Store initial section position
+    this.dragStartSectionPosition = {
+      x: section.position.x,
+      y: section.position.y
+    };
+    
+    // Add global mouse move and up listeners
+    document.addEventListener('mousemove', this.onDocumentMouseMove.bind(this));
+    document.addEventListener('mouseup', this.onDocumentMouseUp.bind(this));
+    
+    // Prevent text selection
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+  }
+
+  onMouseMove(event: MouseEvent): void {
+    // This handles mouse movement within the body area
+    if (this.isDragging) {
+      this.updateDragPosition(event);
+    }
+  }
+
+  onMouseUp(event: MouseEvent): void {
+    // This handles mouse up within the body area
+    if (this.isDragging) {
+      this.endDrag();
+    }
+  }
+
+  private onDocumentMouseMove(event: MouseEvent): void {
+    if (this.isDragging) {
+      this.updateDragPosition(event);
+    }
+  }
+
+  private onDocumentMouseUp(event: MouseEvent): void {
+    if (this.isDragging) {
+      this.endDrag();
+    }
+  }
+
+  private updateDragPosition(event: MouseEvent): void {
+    if (!this.bodyArea || !this.selectedSection) return;
+
+    // Calculate mouse movement delta
+    const deltaX = event.clientX - this.dragStartPosition.x;
+    const deltaY = event.clientY - this.dragStartPosition.y;
+    
+    // Get body area dimensions
+    const bodyAreaRect = this.bodyArea.nativeElement.getBoundingClientRect();
+    
+    // Convert pixel delta to percentage delta
+    const deltaPercentX = (deltaX / bodyAreaRect.width) * 100;
+    const deltaPercentY = (deltaY / bodyAreaRect.height) * 100;
+    
+    // Calculate new position
+    const newX = this.dragStartSectionPosition.x + deltaPercentX;
+    const newY = this.dragStartSectionPosition.y + deltaPercentY;
+    
+    // Apply bounds checking
+    const boundedX = Math.max(0, Math.min(90, newX));
+    const boundedY = Math.max(0, Math.min(90, newY));
+    
+    // Update section position in real-time
+    this.selectedSection.position.x = Math.round(boundedX * 100) / 100;
+    this.selectedSection.position.y = Math.round(boundedY * 100) / 100;
+    
+    // Update the section in the array
+    const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
+    if (sectionIndex !== -1) {
+      this.bodySections[sectionIndex] = this.selectedSection;
+    }
+  }
+
+  private endDrag(): void {
+    this.isDragging = false;
+    
+    // Remove global listeners
+    document.removeEventListener('mousemove', this.onDocumentMouseMove.bind(this));
+    document.removeEventListener('mouseup', this.onDocumentMouseUp.bind(this));
+    
+    // Restore normal cursor and text selection
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    
+    // Validate the final position
+    if (this.selectedSection) {
+      this.selectedSection = this.validateSectionValues(this.selectedSection);
+      const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
+      if (sectionIndex !== -1) {
+        this.bodySections[sectionIndex] = this.selectedSection;
+      }
+    }
+  }
+
+  // Resize Methods
+  onResizeHandleMouseDown(event: MouseEvent, section: BodySection, handle: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    this.isResizing = true;
+    this.resizeHandle = handle;
+    this.selectedSection = section;
+    
+    // Store initial mouse position
+    this.resizeStartPosition = {
+      x: event.clientX,
+      y: event.clientY
+    };
+    
+    // Store initial section size and position
+    this.resizeStartSize = {
+      width: section.size.width,
+      height: section.size.height
+    };
+    
+    this.resizeStartSectionPosition = {
+      x: section.position.x,
+      y: section.position.y
+    };
+    
+    // Add global mouse move and up listeners
+    document.addEventListener('mousemove', this.onDocumentResizeMouseMove.bind(this));
+    document.addEventListener('mouseup', this.onDocumentResizeMouseUp.bind(this));
+    
+    // Prevent text selection
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = this.getResizeCursor(handle);
+  }
+
+  private onDocumentResizeMouseMove(event: MouseEvent): void {
+    if (this.isResizing) {
+      this.updateResizeSize(event);
+    }
+  }
+
+  private onDocumentResizeMouseUp(event: MouseEvent): void {
+    if (this.isResizing) {
+      this.endResize();
+    }
+  }
+
+  private updateResizeSize(event: MouseEvent): void {
+    if (!this.bodyArea || !this.selectedSection) return;
+
+    // Calculate mouse movement delta
+    const deltaX = event.clientX - this.resizeStartPosition.x;
+    const deltaY = event.clientY - this.resizeStartPosition.y;
+    
+    // Get body area dimensions
+    const bodyAreaRect = this.bodyArea.nativeElement.getBoundingClientRect();
+    
+    // Convert pixel delta to percentage delta
+    const deltaPercentX = (deltaX / bodyAreaRect.width) * 100;
+    const deltaPercentY = (deltaY / bodyAreaRect.height) * 100;
+    
+    // Calculate new size and position based on resize handle
+    let newWidth = this.resizeStartSize.width;
+    let newHeight = this.resizeStartSize.height;
+    let newX = this.resizeStartSectionPosition.x;
+    let newY = this.resizeStartSectionPosition.y;
+
+    switch (this.resizeHandle) {
+      case 'se': // Bottom-right corner
+        newWidth = this.resizeStartSize.width + deltaPercentX;
+        newHeight = this.resizeStartSize.height + deltaPercentY;
+        break;
+      case 'sw': // Bottom-left corner
+        newWidth = this.resizeStartSize.width - deltaPercentX;
+        newHeight = this.resizeStartSize.height + deltaPercentY;
+        newX = this.resizeStartSectionPosition.x + deltaPercentX;
+        break;
+      case 'ne': // Top-right corner
+        newWidth = this.resizeStartSize.width + deltaPercentX;
+        newHeight = this.resizeStartSize.height - deltaPercentY;
+        newY = this.resizeStartSectionPosition.y + deltaPercentY;
+        break;
+      case 'nw': // Top-left corner
+        newWidth = this.resizeStartSize.width - deltaPercentX;
+        newHeight = this.resizeStartSize.height - deltaPercentY;
+        newX = this.resizeStartSectionPosition.x + deltaPercentX;
+        newY = this.resizeStartSectionPosition.y + deltaPercentY;
+        break;
+      case 'n': // Top edge
+        newHeight = this.resizeStartSize.height - deltaPercentY;
+        newY = this.resizeStartSectionPosition.y + deltaPercentY;
+        break;
+      case 's': // Bottom edge
+        newHeight = this.resizeStartSize.height + deltaPercentY;
+        break;
+      case 'e': // Right edge
+        newWidth = this.resizeStartSize.width + deltaPercentX;
+        break;
+      case 'w': // Left edge
+        newWidth = this.resizeStartSize.width - deltaPercentX;
+        newX = this.resizeStartSectionPosition.x + deltaPercentX;
+        break;
+    }
+    
+    // Apply bounds checking
+    const minWidth = 10;
+    const minHeight = 5;
+    const maxWidth = 100;
+    const maxHeight = 95;
+
+    // Ensure minimum and maximum sizes
+    newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+    newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+    
+    // Ensure position stays within bounds
+    newX = Math.max(0, Math.min(100 - newWidth, newX));
+    newY = Math.max(0, Math.min(100 - newHeight, newY));
+    
+    // Update section properties in real-time
+    this.selectedSection.size.width = Math.round(newWidth * 100) / 100;
+    this.selectedSection.size.height = Math.round(newHeight * 100) / 100;
+    this.selectedSection.position.x = Math.round(newX * 100) / 100;
+    this.selectedSection.position.y = Math.round(newY * 100) / 100;
+    
+    // Update the section in the array
+    const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
+    if (sectionIndex !== -1) {
+      this.bodySections[sectionIndex] = this.selectedSection;
+    }
+  }
+
+  private endResize(): void {
+    this.isResizing = false;
+    this.resizeHandle = '';
+    
+    // Remove global listeners
+    document.removeEventListener('mousemove', this.onDocumentResizeMouseMove.bind(this));
+    document.removeEventListener('mouseup', this.onDocumentResizeMouseUp.bind(this));
+    
+    // Restore normal cursor and text selection
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    
+    // Validate the final size and position
+    if (this.selectedSection) {
+      this.selectedSection = this.validateSectionValues(this.selectedSection);
+      const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
+      if (sectionIndex !== -1) {
+        this.bodySections[sectionIndex] = this.selectedSection;
+      }
+    }
+  }
+
+  private getResizeCursor(handle: string): string {
+    const cursors: { [key: string]: string } = {
+      'nw': 'nw-resize',
+      'n': 'n-resize',
+      'ne': 'ne-resize',
+      'e': 'e-resize',
+      'se': 'se-resize',
+      's': 's-resize',
+      'sw': 'sw-resize',
+      'w': 'w-resize'
+    };
+    return cursors[handle] || 'default';
+  }
+
+  // Dynamic Content Sizing Methods
+  updateAllSectionsDynamicSize(): void {
+    this.bodySections.forEach(section => {
+      this.updateSectionDynamicSize(section);
+    });
+  }
+
+  updateSectionDynamicSize(section: BodySection): void {
+    // Set appropriate default width based on section type
+    if (!section.size.width || (section.size.width === 45 && section.type === 'patient')) {
+      if (section.type === 'patient') {
+        section.size.width = 100; // Patient info should be full width
+      } else {
+        section.size.width = 45; // Other sections default to 45%
+      }
+    }
+    
+    // Calculate dynamic height based on content and current width
+    const estimatedHeight = this.calculateContentHeight(section.content, section.size.width);
+    const newHeight = Math.max(8, Math.min(95, estimatedHeight));
+    
+    // Only update if height changed significantly to avoid constant updates
+    if (Math.abs(section.size.height - newHeight) > 1) {
+      section.size.height = newHeight;
+      console.log(`Section ${section.id} (${section.type}): Content lines calculated, Height: ${newHeight}%`);
+    }
+    
+    // Update the section in the array
+    const sectionIndex = this.bodySections.findIndex(s => s.id === section.id);
+    if (sectionIndex !== -1) {
+      this.bodySections[sectionIndex] = section;
+    }
+  }
+
+  private calculateContentHeight(content: string, sectionWidth: number = 45): number {
+    if (!content) return 8;
+    
+    // Remove HTML tags for line counting but preserve line breaks
+    const textContent = content.replace(/<[^>]*>/g, '').trim();
+    
+    // Count lines based on newlines and estimated text wrapping
+    const lines = textContent.split('\n');
+    let totalLines = 0;
+    
+    // Calculate characters per line based on section width
+    // Base calculation: full width (100%) can fit ~80 chars, so scale accordingly
+    const baseCharsPerLine = 80;
+    const averageCharsPerLine = Math.floor((sectionWidth / 100) * baseCharsPerLine);
+    
+    console.log(`Calculating height for width ${sectionWidth}%: ${averageCharsPerLine} chars per line`);
+    
+    lines.forEach((line, index) => {
+      if (line.trim().length === 0) {
+        totalLines += 0.5; // Empty lines take less space
+      } else {
+        // Calculate wrapped lines
+        const wrappedLines = Math.ceil(line.length / averageCharsPerLine) || 1;
+        totalLines += wrappedLines;
+      }
+    });
+    
+    // Add extra space for padding and formatting
+    totalLines += 1; // Base padding
+    
+    // Convert lines to percentage height
+    // Adjusted to 1% per line for more compact sizing
+    const heightPerLine = 2.5;
+    const estimatedHeight = Math.max(8, totalLines * heightPerLine);
+    
+    console.log(`Total lines: ${totalLines}, Estimated height: ${estimatedHeight}%`);
+    
+    return Math.min(95, estimatedHeight);
+  }
+
+  // Override existing addBodySection to include dynamic sizing
+  addBodySection(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): void {
+    // Calculate position to avoid overlapping
+    const existingSections = this.bodySections.length;
+    const baseX = 5 + (existingSections % 2) * 50;
+    const baseY = 5 + Math.floor(existingSections / 2) * 40;
+
+    const defaultHeight = type === 'patient' ? 8 : 25; // Shorter height for patient sections
+    const defaultWidth = 45; // Set default width to 45% as requested
+
+    const newSection: BodySection = {
+      id: `${type}-${Date.now()}`,
+      type: type,
+      name: type.charAt(0).toUpperCase() + type.slice(1) + (type === 'patient' ? ' Information' : ''),
+      content: this.getDefaultContent(type),
+      position: { x: baseX, y: baseY },
+      size: { width: defaultWidth, height: defaultHeight },
+      style: this.getDefaultStyle()
+    };
+
+    this.bodySections.push(newSection);
+    this.selectedSection = newSection;
+    
+    // Apply dynamic sizing to the new section
+    setTimeout(() => {
+      this.updateSectionDynamicSize(newSection);
+    }, 100);
+  }
+
+  // Override selectBodySection to trigger dynamic sizing
+  selectBodySection(section: BodySection): void {
+    // Validate section values before selecting
+    const validatedSection = this.validateSectionValues(section);
+    const sectionIndex = this.bodySections.findIndex(s => s.id === section.id);
+    if (sectionIndex !== -1) {
+      this.bodySections[sectionIndex] = validatedSection;
+    }
+    this.selectedSection = validatedSection;
+    
+    // Update dynamic sizing when content changes
+    this.updateSectionDynamicSize(validatedSection);
+  }
+
+  // Method to trigger dynamic sizing update when content changes
+  onSectionContentChange(section: BodySection): void {
+    console.log('Content changed for section:', section.id, 'Content length:', section.content.length);
+    
+    // Find and update the section
+    const sectionIndex = this.bodySections.findIndex(s => s.id === section.id);
+    if (sectionIndex !== -1) {
+      this.bodySections[sectionIndex] = section;
+      // Apply dynamic sizing with a small delay to ensure content is updated
+      setTimeout(() => {
+        this.updateSectionDynamicSize(section);
+      }, 50);
+    }
+  }
+
+  // Additional method to trigger height update when content is edited in TinyMCE
+  onContentEditorChange(newContent: string): void {
+    if (this.selectedSection) {
+      this.selectedSection.content = newContent;
+      this.onSectionContentChange(this.selectedSection);
+    }
   }
   
   // Text formatting methods removed - TinyMCE handles all formatting

@@ -1246,28 +1246,22 @@
 /* Enhanced Body Section Elements */
 .body-section-element {
   position: absolute;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 0.25rem;
   cursor: move;
-  transition: all 0.3s ease;
   overflow: hidden;
   min-width: 60px;
   min-height: 30px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(5px);
 }
 
 .body-section-element:hover {
   border-color: #3b82f6;
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
-  transform: scale(1.02);
 }
 
 .body-section-element.selected {
-  border-color: #3b82f6;
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 8px 25px rgba(59, 130, 246, 0.2);
+  border: 2px solid #3b82f6;
+  background: #f8fafc;
 }
 
 /* Enhanced body section content for better rendering */
@@ -2027,6 +2021,157 @@
 
 .section-content, .body-section-element {
   text-align: left !important;
+}
+
+/* Custom Drag and Drop Styles */
+.body-section-element.dragging {
+  z-index: 1000;
+  border: 2px solid #3b82f6;
+}
+
+.drag-handle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  opacity: 0;
+  color: #3b82f6;
+  z-index: 10;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.body-section-element:hover .drag-handle,
+.body-section-element.selected .drag-handle {
+  opacity: 1;
+}
+
+.drag-handle svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Remove smooth positioning animations to keep it simple */
+
+/* Resize Handles */
+.resize-handles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.resize-handle {
+  position: absolute;
+  background: #3b82f6;
+  border: 1px solid #ffffff;
+  border-radius: 2px;
+  pointer-events: auto;
+  opacity: 0.8;
+}
+
+.resize-handle:hover {
+  background: #2563eb;
+  opacity: 1;
+}
+
+/* Corner handles (squares) */
+.resize-handle-nw,
+.resize-handle-ne,
+.resize-handle-sw,
+.resize-handle-se {
+  width: 8px;
+  height: 8px;
+}
+
+.resize-handle-nw {
+  top: -4px;
+  left: -4px;
+  cursor: nw-resize;
+}
+
+.resize-handle-ne {
+  top: -4px;
+  right: -4px;
+  cursor: ne-resize;
+}
+
+.resize-handle-sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: sw-resize;
+}
+
+.resize-handle-se {
+  bottom: -4px;
+  right: -4px;
+  cursor: se-resize;
+}
+
+/* Edge handles (rectangles) */
+.resize-handle-n,
+.resize-handle-s {
+  width: 20px;
+  height: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.resize-handle-e,
+.resize-handle-w {
+  width: 4px;
+  height: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.resize-handle-n {
+  top: -2px;
+  cursor: n-resize;
+}
+
+.resize-handle-s {
+  bottom: -2px;
+  cursor: s-resize;
+}
+
+.resize-handle-e {
+  right: -2px;
+  cursor: e-resize;
+}
+
+.resize-handle-w {
+  left: -2px;
+  cursor: w-resize;
+}
+
+/* Visual feedback during resize */
+.body-section-element.resizing {
+  z-index: 1000;
+  border: 2px solid #3b82f6;
+}
+
+/* Show resize handles only on selected sections */
+.body-section-element:not(.selected) .resize-handles {
+  display: none;
+}
+
+/* Prevent text selection during drag */
+.body-section-element.dragging * {
+  user-select: none;
+  pointer-events: none;
 }
 
 /* Enhanced Accessibility */
