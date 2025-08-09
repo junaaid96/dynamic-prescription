@@ -1,12 +1,49 @@
 /* You can add global styles to this file, and also import other style files */
 
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Global font improvements for TinyMCE content */
 b, strong {
-  font-weight: bold;
+  font-weight: 700 !important;
+}
+
+em, i {
+  font-style: italic !important;
+}
+
+u {
+  text-decoration: underline !important;
+}
+
+/* Global list styling for better TinyMCE compatibility */
+ul {
+  list-style-type: disc;
+  list-style-position: outside;
+}
+
+ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+}
+
+li {
+  display: list-item;
+}
+
+/* Set consistent default font size (11px converted from 8pt) */
+body {
+  font-size: 11px;
+}
+
+/* Ensure TinyMCE content renders properly */
+.tox-tinymce {
+  font-size: 11px !important;
+}
+
+.mce-content-body {
+  font-size: 11px !important;
 }
 
 

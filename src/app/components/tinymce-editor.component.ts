@@ -45,7 +45,7 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
   @Input() placeholder: string = 'Enter content...';
   @Input() height: number = 200;
   @Input() disabled: boolean = false;
-  @Input() toolbar: string = 'undo redo | bold italic underline | fontsize forecolor backcolor | alignleft aligncenter alignright | bullist numlist | link';
+  @Input() toolbar: string = 'undo redo | bold italic underline | fontsize forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link';
   @Input() menubar: boolean = false;
   @Input() statusbar: boolean = false;
   @Input() resize: boolean = false;
@@ -67,31 +67,35 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
       menubar: this.menubar,
       statusbar: this.statusbar,
       resize: this.resize,
-      // Optimized plugin set for prescription content with font formatting
+      // Enhanced plugin set for better formatting and dynamic sizing
       plugins: [
         'advlist', 'autolink', 'lists', 'link', 'charmap',
-        'searchreplace', 'visualblocks', 'code',
+        'searchreplace', 'visualblocks', 'code', 'autoresize',
         'table', 'help', 'wordcount'
       ],
       toolbar: this.toolbar,
       placeholder: this.placeholder,
       branding: false,
       elementpath: false,
-      // Font size configuration - using pt units
-      fontsize_formats: '8pt 9pt 10pt 11pt 12pt 14pt 16pt 18pt 20pt 22pt 24pt 26pt 28pt 30pt 32pt 36pt 48pt 72pt',
-      // Override TinyMCE default formats to use pt only
+      // Font size configuration - converted to px units as per user memory
+      fontsize_formats: '11px 12px 13px 14px 16px 18px 20px 22px 24px 28px 32px 36px 48px 72px',
+      // Override TinyMCE default formats to use px units
       formats: {
         fontsize: { inline: 'span', styles: { 'font-size': '%value' } }
       },
-      // Set default font size to 10pt
-      font_size_default: '10pt',
+      // Set default font size to 11px (converted from 8pt)
+      font_size_default: '11px',
       // Font family configuration  
       font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Georgia=georgia,palatino,serif; Helvetica=helvetica,arial,sans-serif; Times New Roman=times new roman,times,serif; Verdana=verdana,geneva,sans-serif',
+      // Autoresize configuration for dynamic content sizing
+      autoresize_bottom_margin: 10,
+      autoresize_min_height: this.height,
+      autoresize_max_height: 800,
       // Remove deprecated options for TinyMCE 6.0 compatibility
       verify_html: false,
       cleanup: false,
-      extended_valid_elements: 'p[align|style],div[align|style],span[style|class],font[face|size|color|style]',
-      valid_children: '+body[p|div|span|font]',
+      extended_valid_elements: 'p[align|style],div[align|style],span[style|class],font[face|size|color|style],ul[style],ol[style],li[style]',
+      valid_children: '+body[p|div|span|font|ul|ol|li]',
       // Enable font size and family controls
       toolbar_mode: 'sliding',
       // Add configuration to handle plugin loading issues
@@ -99,18 +103,35 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
       contextmenu: false,
       // Enhanced paste configuration for cleaner content
       paste_as_text: false,
-      // Removed: paste_retain_style_properties, paste_word_valid_elements, paste_merge_formats
-      // Add better content style for TinyMCE 6.0
+      paste_block_drop: false,
+      paste_data_images: true,
+      // Enhanced content style for better bullet point and formatting display
       content_style: `
         body { 
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-          font-size: 10pt; 
-          line-height: 1.3; 
+          font-size: 11px; 
+          line-height: 1.4; 
           margin: 0; 
-          padding: 3px; 
+          padding: 5px; 
+          color: #1e293b;
         }
-        p { margin: 0 0 2px 0; }
+        p { 
+          margin: 0 0 4px 0; 
+          font-size: inherit;
+        }
         p:last-child { margin-bottom: 0; }
+        ul, ol { 
+          margin: 4px 0; 
+          padding-left: 20px; 
+          list-style-position: outside;
+        }
+        ul { list-style-type: disc; }
+        ol { list-style-type: decimal; }
+        li { 
+          margin: 2px 0; 
+          line-height: 1.4;
+          font-size: inherit;
+        }
         p[align="left"] { text-align: left !important; }
         p[align="center"] { text-align: center !important; }
         p[align="right"] { text-align: right !important; }
@@ -119,13 +140,13 @@ export class TinyMCEEditorComponent implements OnInit, OnDestroy, ControlValueAc
         div[align="center"] { text-align: center !important; }
         div[align="right"] { text-align: right !important; }
         div[align="justify"] { text-align: justify !important; }
-        .mce-content-body { padding: 3px; }
-        strong, b { font-weight: bold !important; }
+        .mce-content-body { padding: 5px; }
+        strong, b { font-weight: 700 !important; }
         em, i { font-style: italic !important; }
         u { text-decoration: underline !important; }
         span[style*="font-size"] { }
         font[size] { }
-        * { font-size: inherit; }
+        * { box-sizing: border-box; }
       `,
       // Add better setup for TinyMCE 6.0
       setup: (editor: any) => {

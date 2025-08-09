@@ -1326,9 +1326,8 @@
 
 .section-content {
   padding: 0.375rem;
-  font-size: 10pt; /* Default font size 10pt */
-  line-height: 1.3;
-  white-space: pre-wrap;
+  font-size: 11px; /* Updated to px as per user memory */
+  line-height: 1.4;
   word-wrap: break-word;
   overflow: hidden;
   color: #1e293b;
@@ -1339,7 +1338,7 @@
   font-weight: 400; /* Normal font weight by default */
 }
 
-/* Ensure TinyMCE formatting is properly displayed in preview */
+/* Enhanced TinyMCE formatting display in preview */
 .section-content strong,
 .section-content b {
   font-weight: 700 !important;
@@ -1352,6 +1351,48 @@
 
 .section-content u {
   text-decoration: underline !important;
+}
+
+/* Proper list styling for TinyMCE content */
+.section-content ul,
+.section-content ol {
+  margin: 4px 0;
+  padding-left: 20px;
+  list-style-position: outside;
+}
+
+.section-content ul {
+  list-style-type: disc;
+}
+
+.section-content ol {
+  list-style-type: decimal;
+}
+
+.section-content li {
+  margin: 2px 0;
+  line-height: 1.4;
+  font-size: inherit;
+  display: list-item;
+}
+
+/* Paragraph spacing for TinyMCE content */
+.section-content p {
+  margin: 0 0 4px 0;
+  font-size: inherit;
+}
+
+.section-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Handle TinyMCE inline styles */
+.section-content span[style] {
+  /* Allow inline styles to work properly */
+}
+
+.section-content font {
+  font-family: inherit;
 }
 
 .header-column strong,
@@ -1377,7 +1418,46 @@
 .header-column,
 .footer-column {
   font-weight: 400; /* Normal font weight by default */
-  font-size: 10pt; /* Default font size 10pt */
+  font-size: 11px; /* Updated to px as per user memory */
+}
+
+/* Enhanced header and footer content formatting */
+.header-column ul,
+.header-column ol,
+.footer-column ul,
+.footer-column ol {
+  margin: 4px 0;
+  padding-left: 20px;
+  list-style-position: outside;
+}
+
+.header-column ul,
+.footer-column ul {
+  list-style-type: disc;
+}
+
+.header-column ol,
+.footer-column ol {
+  list-style-type: decimal;
+}
+
+.header-column li,
+.footer-column li {
+  margin: 2px 0;
+  line-height: 1.4;
+  font-size: inherit;
+  display: list-item;
+}
+
+.header-column p,
+.footer-column p {
+  margin: 0 0 4px 0;
+  font-size: inherit;
+}
+
+.header-column p:last-child,
+.footer-column p:last-child {
+  margin-bottom: 0;
 }
 
 /* Allow TinyMCE inline styles to work properly */

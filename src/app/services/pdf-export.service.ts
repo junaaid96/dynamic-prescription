@@ -26,10 +26,13 @@ export class PdfExportService {
     useCanvas: boolean = false
   ): Promise<{ success: boolean; message: string }> {
     try {
+      console.log('PDF Export Debug - paperSize:', paperSize, 'customSize:', customSize, 'available sizes:', Object.keys(this.paperSizes));
+      
       const paperDimensions = paperSize === 'Custom' ? customSize : this.paperSizes[paperSize];
 
       if (!paperDimensions) {
-        throw new Error('Invalid paper size configuration');
+        console.error('Paper dimensions not found for size:', paperSize);
+        throw new Error(`Invalid paper size configuration: ${paperSize}`);
       }
 
       // Choose export method based on useCanvas parameter
@@ -201,12 +204,13 @@ export class PdfExportService {
       }
       
       // Hide any label elements
-      if (htmlEl.className && (
-          htmlEl.className.includes('label') ||
-          htmlEl.className.includes('total-width') ||
-          htmlEl.className.includes('total-height') ||
-          htmlEl.className.includes('margin-') ||
-          htmlEl.className.includes('padding-')
+      const classNames = htmlEl.className?.toString() || '';
+      if (classNames && (
+          classNames.includes('label') ||
+          classNames.includes('total-width') ||
+          classNames.includes('total-height') ||
+          classNames.includes('margin-') ||
+          classNames.includes('padding-')
       )) {
         htmlEl.style.display = 'none';
       }
