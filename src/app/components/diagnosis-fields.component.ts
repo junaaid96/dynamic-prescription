@@ -395,23 +395,24 @@ export class DiagnosisFieldsComponent implements OnInit, ControlValueAccessor {
     
     this.diagnosisItems.forEach(item => {
       if (item.title.trim()) {
-        // Add title (bold, no bullet point)
-        contentParts.push(`<strong>${item.title.trim()}</strong>`);
+        // Add title (bold, no bullet point) with paragraph wrapper
+        contentParts.push(`<p><strong>${item.title.trim()}</strong></p>`);
         
-        // Add children (with bullet points)
-        const childrenContent = item.children
+        // Add children as proper HTML list
+        const childrenValues = item.children
           .map(child => child.value.trim())
-          .filter(value => value.length > 0)
-          .map(value => `• ${value}`)
-          .join('\n');
+          .filter(value => value.length > 0);
         
-        if (childrenContent) {
-          contentParts.push(childrenContent);
+        if (childrenValues.length > 0) {
+          const listItems = childrenValues
+            .map(value => `<li>${value}</li>`)
+            .join('');
+          contentParts.push(`<ul>${listItems}</ul>`);
         }
       }
     });
     
-    const finalContent = contentParts.join('\n');
+    const finalContent = contentParts.join('');
     this.content = finalContent;
     this.onChange(finalContent);
     this.contentChange.emit(finalContent);
@@ -449,30 +450,76 @@ export class DiagnosisFieldsComponent implements OnInit, ControlValueAccessor {
       return;
     }
 
-    // Parse existing content into hierarchical structure
+    // Parse HTML structure (new format) or fallback to legacy format
+    this.diagnosisItems = [];
+    
+    if (this.content.includes('<p>') && this.content.includes('<ul>')) {
+      // Parse new HTML format
+      this.parseHtmlContent();
+    } else {
+      // Parse legacy text format
+      this.parseLegacyContent();
+    }
+
+    // Ensure each title has at least one empty child for editing
+    this.diagnosisItems.forEach(item => {
+      if (item.children.length === 0) {
+        item.children.push({ id: this.generateId(), value: '' });
+      }
+    });
+
+    // If no items were parsed, create a default structure
+    if (this.diagnosisItems.length === 0) {
+      this.diagnosisItems = [{
+        id: this.generateId(),
+        title: 'Chief Complaints',
+        children: [
+          { id: this.generateId(), value: '' },
+          { id: this.generateId(), value: '' }
+        ]
+      }];
+    }
+  }
+
+  private parseHtmlContent(): void {
+    // Extract titles from <p><strong> tags
+    const titleMatches = this.content.match(/<p><strong>(.*?)<\/strong><\/p>/g) || [];
+    
+    // Split content by titles to get corresponding lists
+    const sections = this.content.split(/<p><strong>.*?<\/strong><\/p>/);
+    
+    titleMatches.forEach((titleMatch, index) => {
+      const titleText = titleMatch.replace(/<p><strong>(.*?)<\/strong><\/p>/, '$1').trim();
+      const listSection = sections[index + 1] || '';
+      
+      // Extract list items
+      const listItems = listSection.match(/<li>(.*?)<\/li>/g) || [];
+      const children = listItems.map(item => ({
+        id: this.generateId(),
+        value: item.replace(/<li>(.*?)<\/li>/, '$1').trim()
+      }));
+      
+      this.diagnosisItems.push({
+        id: this.generateId(),
+        title: titleText,
+        children: children.length > 0 ? children : [{ id: this.generateId(), value: '' }]
+      });
+    });
+  }
+
+  private parseLegacyContent(): void {
     const lines = this.content
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 0);
 
-    if (lines.length === 0) {
-      this.diagnosisItems = [{
-        id: this.generateId(),
-        title: '',
-        children: [{ id: this.generateId(), value: '' }]
-      }];
-      return;
-    }
-
-    // Try to parse as hierarchical or convert flat structure
-    this.diagnosisItems = [];
     let currentTitle: DiagnosisItem | null = null;
 
     for (const line of lines) {
       // Check if line is a title (bold HTML or doesn't start with bullet)
       if (line.includes('<strong>') || line.includes('<b>') || (!line.startsWith('•') && !line.startsWith('-'))) {
         // This is a title
-        const titleText = line.replace(/<\/?strong>/g, '').replace(/<\/?b>/g, '').trim();
+        const titleText = line.replace(/<\/?strong>/g, '').replace(/<\/?b>/g, '').replace(/<\/?p>/g, '').trim();
         currentTitle = {
           id: this.generateId(),
           title: titleText,
@@ -498,22 +545,6 @@ export class DiagnosisFieldsComponent implements OnInit, ControlValueAccessor {
           });
         }
       }
-    }
-
-    // Ensure each title has at least one empty child for editing
-    this.diagnosisItems.forEach(item => {
-      if (item.children.length === 0) {
-        item.children.push({ id: this.generateId(), value: '' });
-      }
-    });
-
-    // If no items were parsed, create a default structure
-    if (this.diagnosisItems.length === 0) {
-      this.diagnosisItems = [{
-        id: this.generateId(),
-        title: '',
-        children: [{ id: this.generateId(), value: '' }]
-      }];
     }
   }
 

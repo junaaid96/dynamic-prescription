@@ -134,7 +134,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       id: 'diagnostic-1',
       type: 'diagnostic',
       name: 'Diagnosis',
-      content: '<strong>Chief Complaints</strong>\n• \n• \n<strong>Vitals</strong>\n• \n• \n<strong>Investigations</strong>\n• \n• ',
+      content: '<p><strong>Chief Complaints</strong></p><ul><li></li><li></li></ul><p><strong>Vitals</strong></p><ul><li></li><li></li></ul><p><strong>Investigations</strong></p><ul><li></li><li></li></ul>',
       position: { x: 0, y: 15 },
       size: { width: 45, height: 25 }, // Will be calculated dynamically
       style: {
@@ -150,7 +150,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       id: 'prescription-1',
       type: 'prescription',
       name: 'Prescription',
-      content: 'Rx\n\n1. Amoxicillin 500mg\n   Take 1 capsule 3 times daily for 7 days\n   (After meals)\n\n2. Paracetamol 650mg\n   Take 1 tablet every 6-8 hours as needed\n   (For fever and pain, max 4 tablets/day)\n\n3. Dextromethorphan Syrup 15mg/5ml\n   Take 2 teaspoons 3 times daily\n   (For cough relief)\n\n4. Vitamin C 500mg\n   Take 1 tablet daily for 10 days\n   (Immune support)\n\nInstructions:\n• Complete the full course of antibiotics\n• Drink plenty of fluids (8-10 glasses/day)\n• Take adequate rest\n• Return if symptoms worsen or persist beyond 5 days\n• Avoid cold foods and smoking',
+      content: '<p><strong>Rx</strong></p><p></p>',
       position: { x: 50, y: 15 },
       size: { width: 45, height: 25 }, // Will be calculated dynamically
       style: {
@@ -552,7 +552,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   // Get default content for section types with realistic mock data
   private getDefaultContent(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): string {
     const defaultContent = {
-      diagnostic: '• [Primary symptom]\n• [Secondary symptom]\n• [Duration and severity]\n• [Primary diagnosis]\n• [Secondary diagnosis if applicable]\n• BP: ___/__ mmHg, HR: __ bpm\n• Temp: __°F, RR: __/min\n• [Examination findings]\n• [Treatment plan]\n• [Follow-up instructions]',
+      diagnostic: '<p><strong>Chief Complaints</strong></p><ul><li></li><li></li></ul><p><strong>Vitals</strong></p><ul><li></li><li></li></ul><p><strong>Investigations</strong></p><ul><li></li><li></li></ul>',
       prescription: 'Rx\n\n1. [Medicine Name] [Strength]\n   Take [frequency] for [duration]\n   ([Instructions - e.g., after meals])\n\n2. [Medicine Name] [Strength]\n   Take [frequency] for [duration]\n   ([Instructions])\n\n3. [Medicine Name] [Strength]\n   Take [frequency] for [duration]\n   ([Instructions])\n\nGeneral Instructions:\n• Complete the full course of medication\n• Take medicines as prescribed\n• Return if symptoms persist or worsen\n• Follow-up appointment: [Date]',
       custom: 'Additional Information:\n\n[Lab Reports Required]\n[Dietary Restrictions]\n[Activity Limitations]\n[Special Precautions]\n\n[Any other relevant medical information]',
       patient: 'P.ID: [Patient ID] | Date: [Date] | Name: [Full Name] | Age: [Age] years | Gender: [Male/Female] | Department: [Department] | Contact: [Phone Number] | Address: [Complete Address]'
@@ -1565,39 +1565,60 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   private calculateContentHeight(content: string, sectionWidth: number = 45): number {
     if (!content) return 8;
     
-    // Remove HTML tags for line counting but preserve line breaks
-    const textContent = content.replace(/<[^>]*>/g, '').trim();
+    // More sophisticated content parsing for TinyMCE formatted content
+    let processedContent = content;
     
-    // Count lines based on newlines and estimated text wrapping
-    const lines = textContent.split('\n');
+    // Handle HTML lists (ul, ol) properly
+    const listItems = (content.match(/<li[^>]*>.*?<\/li>/g) || []).length;
+    const listBlocks = (content.match(/<[uo]l[^>]*>.*?<\/[uo]l>/g) || []).length;
+    
+    // Handle paragraphs
+    const paragraphs = (content.match(/<p[^>]*>.*?<\/p>/g) || []).length;
+    
+    // Remove HTML tags for text content calculation
+    const textContent = processedContent
+      .replace(/<[^>]*>/g, '\n') // Replace HTML tags with newlines
+      .replace(/\n+/g, '\n') // Consolidate multiple newlines
+      .trim();
+    
+    // Count text lines
+    const textLines = textContent.split('\n').filter(line => line.trim().length > 0);
+    
+    // Calculate characters per line based on section width and font size
+    // Adjusted for 11px font (default) - approximately 6-7 chars per 1% width
+    const baseCharsPerLine = Math.floor((sectionWidth / 100) * 75); // More conservative estimate
+    
     let totalLines = 0;
     
-    // Calculate characters per line based on section width
-    // Base calculation: full width (100%) can fit ~80 chars, so scale accordingly
-    const baseCharsPerLine = 80;
-    const averageCharsPerLine = Math.floor((sectionWidth / 100) * baseCharsPerLine);
+    // Count list items as individual lines with proper spacing
+    totalLines += listItems * 1.2; // Lists take slightly more space
     
-    console.log(`Calculating height for width ${sectionWidth}%: ${averageCharsPerLine} chars per line`);
+    // Count paragraph breaks
+    totalLines += paragraphs * 0.3; // Paragraph spacing
     
-    lines.forEach((line, index) => {
+    // Count wrapped text lines
+    textLines.forEach(line => {
       if (line.trim().length === 0) {
-        totalLines += 0.5; // Empty lines take less space
+        totalLines += 0.3; // Empty lines
       } else {
-        // Calculate wrapped lines
-        const wrappedLines = Math.ceil(line.length / averageCharsPerLine) || 1;
+        const wrappedLines = Math.ceil(line.length / baseCharsPerLine) || 1;
         totalLines += wrappedLines;
       }
     });
     
-    // Add extra space for padding and formatting
-    totalLines += 1; // Base padding
+    // Add base padding and formatting space
+    totalLines += 1.5; // Base padding
     
-    // Convert lines to percentage height
-    // Adjusted to 1% per line for more compact sizing
-    const heightPerLine = 2.5;
+    // Add extra space for TinyMCE formatting
+    if (content.includes('<strong>') || content.includes('<b>')) totalLines += 0.2;
+    if (content.includes('<em>') || content.includes('<i>')) totalLines += 0.2;
+    if (listItems > 0) totalLines += 0.5; // Extra space for list formatting
+    
+    // Convert lines to percentage height - adjusted for better accuracy
+    const heightPerLine = 2.2; // Slightly reduced for better fit
     const estimatedHeight = Math.max(8, totalLines * heightPerLine);
     
-    console.log(`Total lines: ${totalLines}, Estimated height: ${estimatedHeight}%`);
+    console.log(`Content analysis - Lists: ${listItems}, Paragraphs: ${paragraphs}, Text lines: ${textLines.length}, Estimated height: ${estimatedHeight}%`);
     
     return Math.min(95, estimatedHeight);
   }
