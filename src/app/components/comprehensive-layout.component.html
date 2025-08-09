@@ -229,13 +229,23 @@
         <div *ngIf="selectedSection" class="section-editor">
           <div class="section-editor-header">
             <h4>✏️ Edit Section: {{ selectedSection.name }}</h4>
-            <button 
-              (click)="restoreSectionDefaults(selectedSection.id)" 
-              class="restore-defaults-btn"
-              title="Restore default values for this section"
-            >
-              🔄 Restore Defaults
-            </button>
+            <div class="header-buttons">
+              <button 
+                *ngIf="selectedSection.isManuallyResized"
+                (click)="resetToAutomaticSizing(selectedSection.id)" 
+                class="auto-size-btn"
+                title="Reset to automatic sizing based on content"
+              >
+                📐 Auto Size
+              </button>
+              <button 
+                (click)="restoreSectionDefaults(selectedSection.id)" 
+                class="restore-defaults-btn"
+                title="Restore default values for this section"
+              >
+                🔄 Restore Defaults
+              </button>
+            </div>
           </div>
           
           <div class="editor-group">
@@ -277,11 +287,11 @@
             <div class="size-controls">
               <div class="size-input">
                 <label>Width (%)</label>
-                <input type="number" [(ngModel)]="selectedSection.size.width" min="10" max="100" step="1">
+                <input type="number" [(ngModel)]="selectedSection.size.width" min="10" max="100" step="1" (input)="onManualSizeChange()">
               </div>
               <div class="size-input">
                 <label>Height (%)</label>
-                <input type="number" [(ngModel)]="selectedSection.size.height" min="5" max="95" step="1">
+                <input type="number" [(ngModel)]="selectedSection.size.height" min="5" max="95" step="1" (input)="onManualSizeChange()">
               </div>
             </div>
           </div>
