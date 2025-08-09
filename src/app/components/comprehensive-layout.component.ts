@@ -46,6 +46,7 @@ export interface BodySection {
   content: string;
   position: { x: number; y: number };
   size: { width: number; height: number };
+  isManuallyResized?: boolean; // Flag to track if section was manually resized
   style: {
     fontSize: number;
     fontWeight: string;
@@ -133,7 +134,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       id: 'diagnostic-1',
       type: 'diagnostic',
       name: 'Diagnosis',
-      content: '• Persistent cough for 2 weeks\n• Mild fever (100.4°F)\n• Fatigue and body aches\n• Sore throat\n• Upper Respiratory Tract Infection (URTI)\n• Viral syndrome with secondary bacterial infection\n• BP: 125/78 mmHg, HR: 82 bpm\n• Temp: 100.4°F, RR: 16/min\n• O2 Sat: 98% on room air\n• Patient presents with classic symptoms of viral URTI\n• No underlying comorbidities. Good general condition\n• Advised symptomatic treatment and follow-up',
+      content: '<strong>Chief Complaints</strong>\n• \n• \n<strong>Vitals</strong>\n• \n• \n<strong>Investigations</strong>\n• \n• ',
       position: { x: 0, y: 15 },
       size: { width: 45, height: 25 }, // Will be calculated dynamically
       style: {
@@ -1495,10 +1496,15 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     // Validate the final size and position
     if (this.selectedSection) {
       this.selectedSection = this.validateSectionValues(this.selectedSection);
+      // Mark section as manually resized to prevent automatic sizing from overriding
+      this.selectedSection.isManuallyResized = true;
+      
       const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
       if (sectionIndex !== -1) {
         this.bodySections[sectionIndex] = this.selectedSection;
       }
+      
+      console.log(`Section ${this.selectedSection.id} marked as manually resized`);
     }
   }
 
@@ -1524,6 +1530,12 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   }
 
   updateSectionDynamicSize(section: BodySection): void {
+    // Skip dynamic sizing if the section was manually resized
+    if (section.isManuallyResized) {
+      console.log(`Section ${section.id} (${section.type}): Skipping dynamic sizing - manually resized`);
+      return;
+    }
+    
     // Set appropriate default width based on section type
     if (!section.size.width || (section.size.width === 45 && section.type === 'patient')) {
       if (section.type === 'patient') {
@@ -1653,6 +1665,42 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     if (this.selectedSection) {
       this.selectedSection.content = newContent;
       this.onSectionContentChange(this.selectedSection);
+    }
+  }
+
+  // Method called when user manually changes size values in input fields
+  onManualSizeChange(): void {
+    if (this.selectedSection) {
+      // Mark section as manually resized to prevent automatic sizing
+      this.selectedSection.isManuallyResized = true;
+      
+      // Update the section in the array
+      const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
+      if (sectionIndex !== -1) {
+        this.bodySections[sectionIndex] = this.selectedSection;
+      }
+      
+      console.log(`Section ${this.selectedSection.id} marked as manually resized via input change`);
+    }
+  }
+
+  // Method to reset a section back to automatic sizing
+  resetToAutomaticSizing(sectionId: string): void {
+    const section = this.bodySections.find(s => s.id === sectionId);
+    if (section) {
+      // Remove the manual resize flag
+      section.isManuallyResized = false;
+      
+      // Apply dynamic sizing to recalculate size based on content
+      this.updateSectionDynamicSize(section);
+      
+      // Update selected section reference if it's the same section
+      if (this.selectedSection && this.selectedSection.id === sectionId) {
+        this.selectedSection = { ...section };
+      }
+      
+      console.log(`Section ${section.id} reset to automatic sizing`);
+      this.showNotification(`Section "${section.name}" reset to automatic sizing`, 'success');
     }
   }
   
