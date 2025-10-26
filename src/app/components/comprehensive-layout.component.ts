@@ -1,12 +1,9 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
-import { PdfExportService } from '../services/pdf-export.service';
 import { Section, SectionColumn } from '../models/section.model';
 import { SettingsService, SavedSetting } from '../services/settings.service';
-import { HtmlContentService } from '../services/html-content.service';
 import { ValidationService } from '../services/validation.service';
 import { ResponsiveService, ScreenSize } from '../services/responsive.service';
 // TinyMCE handles all text formatting - removed text selection and formatting imports
-import { HtmlParsingService } from '../services/html-parsing.service';
 import { Subscription } from 'rxjs';
 import { CdkDragDrop, CdkDragMove } from '@angular/cdk/drag-drop';
 
@@ -263,6 +260,9 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   private screenSizeSubscription?: Subscription;
   currentScreenSize?: ScreenSize;
 
+  // Store bound keyboard handler for proper cleanup
+  private boundKeyHandler = this.handleKeyboardShortcuts.bind(this);
+
   // Drag and drop properties
   @ViewChild('bodyArea', { static: false }) bodyArea?: ElementRef;
   isDragging = false;
@@ -280,12 +280,9 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   resizeStartSectionPosition = { x: 0, y: 0 };
 
   constructor(
-    private pdfExportService: PdfExportService,
     private settingsService: SettingsService,
-    public htmlContentService: HtmlContentService,
     private validationService: ValidationService,
-    private responsiveService: ResponsiveService,
-    private htmlParsingService: HtmlParsingService
+    private responsiveService: ResponsiveService
   ) { }
 
   ngOnInit(): void {
@@ -357,11 +354,11 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   }
 
   private setupKeyboardShortcuts(): void {
-    document.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
+    document.addEventListener('keydown', this.boundKeyHandler);
   }
 
   private removeKeyboardShortcuts(): void {
-    document.removeEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
+    document.removeEventListener('keydown', this.boundKeyHandler);
   }
 
   private handleKeyboardShortcuts(event: KeyboardEvent): void {
@@ -371,16 +368,16 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     }
 
     switch (event.key.toLowerCase()) {
-      case 'p':
-        if (event.ctrlKey || event.metaKey) {
-          event.preventDefault();
-          this.exportToPDF();
-        }
-        break;
       case 's':
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
           this.saveConfiguration();
+        }
+        break;
+      case 'p':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          this.printPrescription();
         }
         break;
       case 'delete':
@@ -547,6 +544,11 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     return text.replace(/\n/g, '<br>');
   }
 
+  // Print prescription method
+  printPrescription(): void {
+    window.print();
+  }
+
 
 
   // Get default content for section types with realistic mock data
@@ -666,82 +668,6 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     };
   }
 
-  // Add PDF export functionality
-  async exportToPDF(): Promise<void> {
-    try {
-      // Show loading indicator
-      this.showNotification('Generating PDF...', 'info');
-
-      // Validate configuration before export
-      if (!this.validateConfiguration()) {
-        return;
-      }
-
-      const sections: Section[] = this.convertLayoutToSections();
-
-      // Determine paper dimensions for custom size
-      const customSize = this.config.pageType === 'Custom' 
-        ? { width: this.config.totalWidth * 25.4, height: this.config.totalHeight * 25.4 } // Convert inches to mm
-        : undefined;
-
-      const result = await this.pdfExportService.exportToPDF(
-        sections,
-        this.config.pageType,
-        customSize,
-        'prescription',
-        false // Use traditional jsPDF method to avoid border issues
-      );
-
-      if (result.success) {
-        this.showNotification('PDF exported successfully!', 'success');
-        console.log('PDF exported successfully');
-      } else {
-        this.showNotification('Failed to export PDF: ' + result.message, 'error');
-        console.error('PDF export failed:', result.message);
-      }
-    } catch (error) {
-      this.showNotification('Failed to export PDF. Please try again.', 'error');
-      console.error('Error exporting PDF:', error);
-    }
-  }
-
-  async exportToPDFWithCanvas(): Promise<void> {
-    try {
-      // Show loading indicator
-      this.showNotification('Generating visual PDF...', 'info');
-
-      // Validate configuration before export
-      if (!this.validateConfiguration()) {
-        return;
-      }
-
-      const sections: Section[] = this.convertLayoutToSections();
-
-      // Determine paper dimensions for custom size
-      const customSize = this.config.pageType === 'Custom' 
-        ? { width: this.config.totalWidth * 25.4, height: this.config.totalHeight * 25.4 } // Convert inches to mm
-        : undefined;
-
-      const result = await this.pdfExportService.exportToPDF(
-        sections,
-        this.config.pageType,
-        customSize,
-        'prescription-visual',
-        true // Use canvas method with clean clone
-      );
-
-      if (result.success) {
-        this.showNotification('Visual PDF exported successfully!', 'success');
-        console.log('Visual PDF exported successfully');
-      } else {
-        this.showNotification('Failed to export visual PDF: ' + result.message, 'error');
-        console.error('Visual PDF export failed:', result.message);
-      }
-    } catch (error) {
-      this.showNotification('Failed to export visual PDF. Please try again.', 'error');
-      console.error('Error exporting visual PDF:', error);
-    }
-  }
 
   private validateConfiguration(): boolean {
     // Use validation service for comprehensive validation

@@ -9,7 +9,6 @@ import { ComprehensiveLayoutComponent } from './components/comprehensive-layout.
 import { TinyMCEEditorComponent } from './components/tinymce-editor.component';
 import { DiagnosisFieldsComponent } from './components/diagnosis-fields.component';
 import { SafeHtmlPipe } from './pipes/safe-html.pipe';
-import { HtmlParsingService } from './services/html-parsing.service';
 
 @NgModule({
   declarations: [
@@ -25,7 +24,7 @@ import { HtmlParsingService } from './services/html-parsing.service';
     EditorModule,
     DragDropModule
   ],
-  providers: [HtmlParsingService],
+  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

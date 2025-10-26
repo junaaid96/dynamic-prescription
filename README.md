@@ -131,7 +131,6 @@ src/
 │   │   ├── comprehensive-layout.component.css
 │   │   └── tinymce-editor.component.ts
 │   ├── services/
-│   │   ├── pdf-export.service.ts
 │   │   ├── html-content.service.ts
 │   │   ├── settings.service.ts
 │   │   ├── settings.service.spec.ts

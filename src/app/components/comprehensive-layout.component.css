@@ -35,15 +35,23 @@
   }
 }
 
-/* Print Styles for Clean Output - No Borders */
+/* Print Styles for Clean Output - Targeted Border Removal */
+@page {
+  margin: 0;
+  size: auto;
+}
+
 @media print {
   /* Hide all UI elements */
   .config-panel,
+  .actions-panel,
   .action-buttons,
+  .action-buttons-grid,
   .column-layout-controls,
   .section-actions,
   .body-section-controls,
   .keyboard-shortcuts,
+  .shortcuts-help,
   .column-content-section {
     display: none !important;
   }
@@ -66,8 +74,38 @@
     padding: 0 !important;
   }
   
-  /* Remove ALL borders from ALL elements */
-  * {
+  /* Hide active modals during print */
+  .modal-overlay,
+  .modal-content,
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    display: none !important;
+  }
+  
+  /* Targeted border removal for UI containers only */
+  .config-panel,
+  .actions-panel,
+  .layout-diagram,
+  .preview-container,
+  .total-page-container,
+  .prescription-area,
+  .total-width-label,
+  .total-height-label,
+  .margin-top-label,
+  .margin-bottom-label,
+  .margin-left-label,
+  .margin-right-label,
+  .padding-top-label,
+  .padding-bottom-label,
+  .padding-left-label,
+  .padding-right-label,
+  .drag-handle,
+  .resize-handles,
+  .resize-handle,
+  .section-header,
+  .body-section-element.selected,
+  .body-section-element:hover {
     border: none !important;
     outline: none !important;
     box-shadow: none !important;
@@ -93,7 +131,6 @@
   }
   
   .content-area,
-  .area-content,
   .layout-diagram,
   .preview-container {
     border: none !important;
@@ -132,6 +169,14 @@
     outline: none !important;
     box-shadow: none !important;
     background: white !important;
+    pointer-events: none !important;
+    cursor: default !important;
+  }
+  
+  .body-section-element.selected {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
   }
   
   .section-content {
@@ -139,6 +184,13 @@
     outline: none !important;
     box-shadow: none !important;
     background: white !important;
+  }
+  
+  /* Hide all interactive elements */
+  .drag-handle,
+  .resize-handles,
+  .resize-handle {
+    display: none !important;
   }
   
   /* Hide section headers */
@@ -160,13 +212,6 @@
     box-shadow: none !important;
   }
   
-  /* Force all divs to have no borders */
-  div {
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-  }
-  
   /* Override any specific border styles that might persist */
   .total-page-container,
   .prescription-area,
@@ -176,11 +221,31 @@
     border-color: transparent !important;
   }
   
-  /* Remove all possible border variants */
-  [class*="border"],
-  [class*="dashed"],
-  [style*="border"],
-  [style*="dashed"] {
+  /* Remove all possible border variants for UI elements only */
+  .config-panel[class*="border"],
+  .actions-panel[class*="border"],
+  .layout-diagram[class*="border"],
+  .preview-container[class*="border"],
+  .total-page-container[class*="border"],
+  .prescription-area[class*="border"],
+  .config-panel[class*="dashed"],
+  .actions-panel[class*="dashed"],
+  .layout-diagram[class*="dashed"],
+  .preview-container[class*="dashed"],
+  .total-page-container[class*="dashed"],
+  .prescription-area[class*="dashed"],
+  .config-panel[style*="border"],
+  .actions-panel[style*="border"],
+  .layout-diagram[style*="border"],
+  .preview-container[style*="border"],
+  .total-page-container[style*="border"],
+  .prescription-area[style*="border"],
+  .config-panel[style*="dashed"],
+  .actions-panel[style*="dashed"],
+  .layout-diagram[style*="dashed"],
+  .preview-container[style*="dashed"],
+  .total-page-container[style*="dashed"],
+  .prescription-area[style*="dashed"] {
     border: none !important;
     border-style: none !important;
     border-width: 0px !important;
