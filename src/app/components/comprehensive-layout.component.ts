@@ -279,9 +279,12 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   resizeStartSize = { width: 0, height: 0 };
   resizeStartSectionPosition = { x: 0, y: 0 };
 
+  // Validation properties
+  validationResults: any = null;
+
   constructor(
     private settingsService: SettingsService,
-    private validationService: ValidationService,
+    public validationService: ValidationService,
     private responsiveService: ResponsiveService
   ) { }
 
@@ -368,12 +371,6 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     }
 
     switch (event.key.toLowerCase()) {
-      case 's':
-        if (event.ctrlKey || event.metaKey) {
-          event.preventDefault();
-          this.saveConfiguration();
-        }
-        break;
       case 'p':
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
@@ -427,6 +424,43 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     this.layout.bottomPadding = this.config.bottomPadding * this.INCH_TO_PX;
     this.layout.headerHeight = this.config.headerHeight * this.INCH_TO_PX;
     this.layout.footerHeight = this.config.footerHeight * this.INCH_TO_PX;
+    
+    // Validate layout after update
+    this.validateAndNotify();
+  }
+
+  // Layout Calculation Helper Methods
+  getContentAreaWidth(): number {
+    return this.layout.totalWidth - this.layout.leftMargin - this.layout.rightMargin - this.layout.leftPadding - this.layout.rightPadding;
+  }
+
+  getContentAreaHeight(): number {
+    return this.layout.totalHeight - this.layout.topMargin - this.layout.bottomMargin - this.layout.topPadding - this.layout.bottomPadding;
+  }
+
+  getBodyAreaHeight(): number {
+    return this.getContentAreaHeight() - this.layout.headerHeight - this.layout.footerHeight;
+  }
+
+  getBodyAreaWidth(): number {
+    return this.getContentAreaWidth();
+  }
+
+  // Public methods for template access
+  getContentAreaWidthPx(): number {
+    return this.getContentAreaWidth();
+  }
+
+  getContentAreaHeightPx(): number {
+    return this.getContentAreaHeight();
+  }
+
+  getBodyAreaHeightPx(): number {
+    return this.getBodyAreaHeight();
+  }
+
+  getBodyAreaWidthPx(): number {
+    return this.getBodyAreaWidth();
   }
 
   updateColumnLayout(column: 'column1' | 'column2' | 'column3', value: number): void {
@@ -906,22 +940,6 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     return sections;
   }
 
-  // Add save configuration method
-  saveConfiguration(): void {
-    const configData = {
-      layout: this.config,
-      bodySections: this.bodySections,
-      timestamp: new Date().toISOString()
-    };
-    
-    const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'comprehensive-layout-config.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
 
   // Settings management methods
   openSaveSettingsModal(): void {
@@ -956,7 +974,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
         this.newSettingDescription
       );
       
-      this.showNotification(`Setting "${savedSetting.name}" saved successfully!`, 'success');
+      this.showNotification(`Setting "${this.newSettingName}" saved successfully!`, 'success');
       this.closeSaveSettingsModal();
       this.loadSettingsHistory();
     } catch (error) {
@@ -990,7 +1008,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       }
       
       if (configData.bodySections) {
-        this.bodySections = this.ensureDefaultValues(configData.bodySections);
+        this.bodySections = configData.bodySections;
       }
       
       if (configData.headerColumns) {
@@ -1037,30 +1055,6 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString();
   }
 
-  exportAllSettings(): void {
-    try {
-      this.settingsService.exportSettings();
-      this.showNotification('All settings exported successfully!', 'success');
-    } catch (error) {
-      console.error('Error exporting settings:', error);
-      this.showNotification('Failed to export settings. Please try again.', 'error');
-    }
-  }
-
-  importSettings(event: any): void {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    this.settingsService.importSettings(file)
-      .then(() => {
-        this.showNotification('Settings imported successfully!', 'success');
-        this.loadSettingsHistory();
-      })
-      .catch((error) => {
-        console.error('Error importing settings:', error);
-        this.showNotification('Failed to import settings. Please check the file format.', 'error');
-      });
-  }
 
   clearAllSettings(): void {
     if (confirm('Are you sure you want to clear all saved settings? This action cannot be undone.')) {
@@ -1075,51 +1069,6 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     }
   }
 
-  // Add load configuration method
-  loadConfiguration(event: any): void {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      try {
-        const configData = JSON.parse(e.target.result);
-        if (configData.layout) {
-          this.config = { ...this.config, ...configData.layout };
-          this.updateLayout();
-        }
-        if (configData.bodySections) {
-          // Ensure loaded sections have default values if missing
-          this.bodySections = this.ensureDefaultValues(configData.bodySections);
-        }
-        this.showNotification('Configuration loaded successfully!', 'success');
-      } catch (error) {
-        console.error('Error loading configuration:', error);
-        this.showNotification('Error loading configuration file. Please check the file format.', 'error');
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  // Ensure sections have default values if missing
-  private ensureDefaultValues(sections: BodySection[]): BodySection[] {
-    return sections.map(section => {
-      const defaultSection = this.DEFAULT_SECTIONS.find(ds => ds.type === section.type);
-      if (defaultSection) {
-        return {
-          ...defaultSection,
-          ...section,
-          id: section.id || `${section.type}-${Date.now()}`,
-          content: section.content || defaultSection.content,
-          style: {
-            ...defaultSection.style,
-            ...section.style
-          }
-        };
-      }
-      return section;
-    });
-  }
 
   // Validate and fix section values to ensure they stay within bounds
   private validateSectionValues(section: BodySection): BodySection {
@@ -1132,6 +1081,19 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     // Ensure size values are reasonable (10-100% width, 5-95% height)
     validated.size.width = Math.max(10, Math.min(100, validated.size.width));
     validated.size.height = Math.max(5, Math.min(95, validated.size.height));
+    
+    // Ensure section doesn't exceed 100% in either dimension
+    if (validated.position.x + validated.size.width > 100) {
+      validated.size.width = 100 - validated.position.x;
+    }
+    if (validated.position.y + validated.size.height > 100) {
+      validated.size.height = 100 - validated.position.y;
+    }
+    
+    // Ensure minimum spacing between sections (2% gap)
+    const minGap = 2;
+    validated.position.x = Math.max(0, Math.min(100 - validated.size.width - minGap, validated.position.x));
+    validated.position.y = Math.max(0, Math.min(100 - validated.size.height - minGap, validated.position.y));
     
     // Ensure style values are within reasonable bounds
     validated.style.fontSize = Math.max(8, Math.min(24, validated.style.fontSize));
@@ -1154,6 +1116,74 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     }
     
     return validated;
+  }
+
+  // Prevent overlap between sections
+  private preventOverlap(section: BodySection): BodySection {
+    const adjusted = { ...section };
+    const tolerance = 1; // 1% tolerance for overlap detection
+    
+    for (const otherSection of this.bodySections) {
+      if (otherSection.id === section.id) continue;
+      
+      const overlap = this.validationService.sectionsOverlap(adjusted, otherSection, tolerance);
+      if (overlap) {
+        // Calculate minimum adjustment needed
+        const adjustment = this.validationService.resolveOverlap(adjusted, otherSection);
+        if (adjustment) {
+          adjusted.position.x = adjustment.x;
+          adjusted.position.y = adjustment.y;
+        }
+      }
+    }
+    
+    return adjusted;
+  }
+
+  // Real-time validation and notification
+  private validateAndNotify(): void {
+    const layoutValidation = this.validationService.validateLayoutConfig(this.config);
+    const sectionsValidation = this.validationService.validateAllSections(this.bodySections);
+    
+    this.validationResults = {
+      layout: layoutValidation,
+      sections: sectionsValidation
+    };
+    
+    // Display validation errors
+    if (!layoutValidation.isValid) {
+      layoutValidation.errors.forEach(error => {
+        this.showNotification(error, 'error');
+      });
+    }
+    
+    if (!sectionsValidation.isValid) {
+      sectionsValidation.errors.forEach(error => {
+        this.showNotification(error, 'error');
+      });
+    }
+    
+    // Display warnings
+    layoutValidation.warnings.forEach(warning => {
+      this.showNotification(warning, 'warning');
+    });
+    
+    sectionsValidation.warnings.forEach(warning => {
+      this.showNotification(warning, 'warning');
+    });
+  }
+
+  // Get section inline styles for template
+  getSectionInlineStyles(section: BodySection): any {
+    return {
+      'padding': `${section.style.padding}px`,
+      'box-sizing': 'border-box',
+      'font-size': `${section.style.fontSize}px`,
+      'color': section.style.fontColor,
+      'text-align': section.style.textAlign,
+      'font-weight': section.style.fontWeight,
+      'overflow': 'hidden'
+    };
   }
 
   // Apply validation to all sections
@@ -1266,13 +1296,22 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     document.body.style.userSelect = '';
     document.body.style.cursor = '';
     
-    // Validate the final position
+    // Validate the final position and prevent overlaps
     if (this.selectedSection) {
       this.selectedSection = this.validateSectionValues(this.selectedSection);
+      this.selectedSection = this.preventOverlap(this.selectedSection);
+      
+      // Round positions to nearest 0.5% for cleaner alignment
+      this.selectedSection.position.x = Math.round(this.selectedSection.position.x * 2) / 2;
+      this.selectedSection.position.y = Math.round(this.selectedSection.position.y * 2) / 2;
+      
       const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
       if (sectionIndex !== -1) {
         this.bodySections[sectionIndex] = this.selectedSection;
       }
+      
+      // Validate all sections after drag
+      this.validateAndNotify();
     }
   }
 
@@ -1419,9 +1458,11 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     document.body.style.userSelect = '';
     document.body.style.cursor = '';
     
-    // Validate the final size and position
+    // Validate the final size and position, prevent overlaps
     if (this.selectedSection) {
       this.selectedSection = this.validateSectionValues(this.selectedSection);
+      this.selectedSection = this.preventOverlap(this.selectedSection);
+      
       // Mark section as manually resized to prevent automatic sizing from overriding
       this.selectedSection.isManuallyResized = true;
       
@@ -1429,6 +1470,9 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       if (sectionIndex !== -1) {
         this.bodySections[sectionIndex] = this.selectedSection;
       }
+      
+      // Validate all sections after resize
+      this.validateAndNotify();
       
       console.log(`Section ${this.selectedSection.id} marked as manually resized`);
     }
@@ -1540,11 +1584,19 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     if (content.includes('<em>') || content.includes('<i>')) totalLines += 0.2;
     if (listItems > 0) totalLines += 0.5; // Extra space for list formatting
     
+    // Account for section's own padding and margin in height calculation
+    const sectionPadding = this.selectedSection?.style.padding || 8;
+    const sectionMargin = this.selectedSection?.style.margin || 3;
+    const paddingLines = (sectionPadding * 2) / 11; // Convert padding to lines (assuming 11px line height)
+    const marginLines = (sectionMargin * 2) / 11; // Convert margin to lines
+    
+    totalLines += paddingLines + marginLines;
+    
     // Convert lines to percentage height - adjusted for better accuracy
     const heightPerLine = 2.2; // Slightly reduced for better fit
     const estimatedHeight = Math.max(8, totalLines * heightPerLine);
     
-    console.log(`Content analysis - Lists: ${listItems}, Paragraphs: ${paragraphs}, Text lines: ${textLines.length}, Estimated height: ${estimatedHeight}%`);
+    console.log(`Content analysis - Lists: ${listItems}, Paragraphs: ${paragraphs}, Text lines: ${textLines.length}, Padding: ${paddingLines}, Margin: ${marginLines}, Estimated height: ${estimatedHeight}%`);
     
     return Math.min(95, estimatedHeight);
   }
@@ -1569,12 +1621,17 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       style: this.getDefaultStyle()
     };
 
-    this.bodySections.push(newSection);
-    this.selectedSection = newSection;
+    // Validate and prevent overlaps before adding
+    const validatedSection = this.validateSectionValues(newSection);
+    const overlapPreventedSection = this.preventOverlap(validatedSection);
+
+    this.bodySections.push(overlapPreventedSection);
+    this.selectedSection = overlapPreventedSection;
     
     // Apply dynamic sizing to the new section
     setTimeout(() => {
-      this.updateSectionDynamicSize(newSection);
+      this.updateSectionDynamicSize(overlapPreventedSection);
+      this.validateAndNotify();
     }, 100);
   }
 
