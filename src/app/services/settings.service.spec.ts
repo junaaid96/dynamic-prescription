@@ -33,7 +33,7 @@ describe('SettingsService', () => {
 
   it('should load a specific setting by ID', () => {
     const testConfig = { test: 'data' };
-    const savedSetting = service.saveSetting('Test Setting', testConfig);
+    const savedSetting = service.saveSetting('Test Setting', testConfig, 'Test description');
     
     const loadedSetting = service.loadSetting(savedSetting.id);
     expect(loadedSetting).toEqual(savedSetting);

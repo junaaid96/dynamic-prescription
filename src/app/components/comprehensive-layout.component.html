@@ -305,25 +305,7 @@
         <h3>⚡ Actions</h3>
         
         <!-- Place the file input just before the grid for accessibility -->
-        <input
-          type="file"
-          accept=".json"
-          (change)="loadConfiguration($event)"
-          style="display: none"
-          #fileInput
-        />
         <div class="action-buttons-grid">
-          <button
-            (click)="saveConfiguration()"
-            class="action-btn action-btn-blue"
-            title="Save current configuration to file (Ctrl+S)"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"></path>
-            </svg>
-            Save to File
-          </button>
-          
           <button
             (click)="printPrescription()"
             class="action-btn action-btn-green"
@@ -356,17 +338,6 @@
             </svg>
             Load Settings
           </button>
-          
-          <button
-            (click)="fileInput.click()"
-            class="action-btn action-btn-green span-2"
-            title="Load configuration from file"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-            </svg>
-            Load from File
-          </button>
 
           <!-- Reset Configuration -->
           <button
@@ -385,10 +356,6 @@
         <div class="shortcuts-help">
           <h4>⌨️ Keyboard Shortcuts</h4>
           <div class="shortcuts-list">
-            <div class="shortcut-item">
-              <span class="shortcut-key">Ctrl+S</span>
-              <span class="shortcut-desc">Save Config</span>
-            </div>
             <div class="shortcut-item">
               <span class="shortcut-key">Ctrl+P</span>
               <span class="shortcut-desc">Print Prescription</span>
@@ -505,6 +472,7 @@
             class="total-page-container"
             [style.width.px]="layout.totalWidth"
             [style.height.px]="layout.totalHeight"
+            [style.box-sizing]="'border-box'"
           >
             <!-- Total Width Label -->
             <div class="total-width-label">
@@ -551,13 +519,15 @@
               [style.top.px]="layout.topMargin"
               [style.width.px]="layout.totalWidth - layout.leftMargin - layout.rightMargin"
               [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin"
+              [style.box-sizing]="'border-box'"
             >
               <!-- Content Area with Padding -->
               <div class="content-area"
                    [style.left.px]="layout.leftPadding"
                    [style.top.px]="layout.topPadding"
-                   [style.width.px]="layout.totalWidth - layout.leftMargin - layout.rightMargin - layout.leftPadding - layout.rightPadding"
-                   [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding">
+                   [style.width.px]="getContentAreaWidthPx()"
+                   [style.height.px]="getContentAreaHeightPx()"
+                   [style.box-sizing]="'border-box'">
                 <div class="area-content">
                                     <div class="header-area" *ngIf="config.headerHeight > 0" [style.height.px]="layout.headerHeight">
                     <div class="header-columns">
@@ -571,7 +541,8 @@
                        #bodyArea
                        (mouseup)="onMouseUp($event)"
                        (mousemove)="onMouseMove($event)"
-                       [style.height.px]="layout.totalHeight - layout.topMargin - layout.bottomMargin - layout.topPadding - layout.bottomPadding - layout.headerHeight - layout.footerHeight">
+                       [style.height.px]="getBodyAreaHeightPx()"
+                       [style.box-sizing]="'border-box'">
                     <!-- Body Sections -->
                     <div *ngFor="let section of bodySections" 
                          class="body-section-element"
@@ -582,6 +553,7 @@
                          [style.top.%]="section.position.y"
                          [style.width.%]="section.size.width"
                          [style.height.%]="section.size.height"
+                         [ngStyle]="getSectionInlineStyles(section)"
                          (click)="selectBodySection(section)"
                          (mousedown)="onMouseDown($event, section)">
                       <div class="section-content">
@@ -628,6 +600,47 @@
     </div>
   </div>
 
+  <!-- Validation Warnings Display -->
+  <div *ngIf="validationResults && (validationResults.layout?.warnings?.length > 0 || validationResults.sections?.warnings?.length > 0 || validationResults.layout?.errors?.length > 0 || validationResults.sections?.errors?.length > 0)" class="validation-warnings">
+    <div class="validation-header">
+      <h4>⚠️ Layout Validation</h4>
+    </div>
+    
+    <!-- Layout Errors -->
+    <div *ngIf="validationResults.layout?.errors?.length > 0" class="validation-section">
+      <div class="validation-title error">❌ Layout Errors</div>
+      <div *ngFor="let error of validationResults.layout.errors" class="validation-error">
+        <div class="validation-message">{{ error }}</div>
+        <button class="validation-action" (click)="validationService.autoFixLayout(config)">Auto Fix</button>
+      </div>
+    </div>
+    
+    <!-- Section Errors -->
+    <div *ngIf="validationResults.sections?.errors?.length > 0" class="validation-section">
+      <div class="validation-title error">❌ Section Errors</div>
+      <div *ngFor="let error of validationResults.sections.errors" class="validation-error">
+        <div class="validation-message">{{ error }}</div>
+        <button class="validation-action" (click)="validationService.validateAndFixAllSections(bodySections)">Auto Fix</button>
+      </div>
+    </div>
+    
+    <!-- Layout Warnings -->
+    <div *ngIf="validationResults.layout?.warnings?.length > 0" class="validation-section">
+      <div class="validation-title warning">⚠️ Layout Warnings</div>
+      <div *ngFor="let warning of validationResults.layout.warnings" class="validation-warning">
+        <div class="validation-message">{{ warning }}</div>
+      </div>
+    </div>
+    
+    <!-- Section Warnings -->
+    <div *ngIf="validationResults.sections?.warnings?.length > 0" class="validation-section">
+      <div class="validation-title warning">⚠️ Section Warnings</div>
+      <div *ngFor="let warning of validationResults.sections.warnings" class="validation-warning">
+        <div class="validation-message">{{ warning }}</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Save Settings Modal -->
   <div *ngIf="showSettingsModal" class="modal-overlay" (click)="closeSaveSettingsModal()">
     <div class="modal-content" (click)="$event.stopPropagation()">
@@ -637,12 +650,12 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="settingName">Setting Name *</label>
+          <label for="settingName">Username *</label>
           <input
             id="settingName"
             type="text"
             [(ngModel)]="newSettingName"
-            placeholder="Enter a name for this setting"
+            placeholder="Enter username for this setting"
             class="form-input"
             maxlength="50"
           >
@@ -700,25 +713,6 @@
             </svg>
           </div>
           <div class="settings-buttons">
-            <button (click)="exportAllSettings()" class="btn-secondary" title="Export all settings">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
-              Export All
-            </button>
-            <input
-              type="file"
-              accept=".json"
-              (change)="importSettings($event)"
-              style="display: none"
-              #importFileInput
-            />
-            <button (click)="importFileInput.click()" class="btn-secondary" title="Import settings">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-              </svg>
-              Import
-            </button>
             <button (click)="clearAllSettings()" class="btn-danger" title="Clear all settings">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -736,7 +730,7 @@
                 <h4 class="setting-name">{{ setting.name }}</h4>
                 <span class="setting-date">{{ formatDate(setting.timestamp) }}</span>
               </div>
-              <p class="setting-description" *ngIf="setting.description">{{ setting.description }}</p>
+              <p class="setting-description" *ngIf="setting.description" [innerHTML]="setting.description | safeHtml"></p>
               <div class="setting-meta">
                 <span class="setting-version">v{{ setting.version }}</span>
                 <span class="setting-id">ID: {{ setting.id }}</span>
