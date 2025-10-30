@@ -1,16 +1,8 @@
 import { Injectable } from '@angular/core';
+import { SavedSetting, SavedSettingConfig, SettingsHistory } from '../models/section.model';
 
-export interface SavedSetting {
-  id: string;
-  name: string;
-  description?: string;
-  config: any;
-  timestamp: Date;
-  version: string;
-}
-
-export interface SettingsHistory {
-  settings: SavedSetting[];
+// Extended SettingsHistory with lastUpdated field
+interface ExtendedSettingsHistory extends Omit<SettingsHistory, 'maxSettings'> {
   lastUpdated: Date;
 }
 
@@ -27,7 +19,7 @@ export class SettingsService {
   /**
    * Save a new setting to localStorage
    */
-  saveSetting(name: string, config: any, description?: string): SavedSetting {
+  saveSetting(name: string, config: SavedSettingConfig, description?: string): SavedSetting {
     const setting: SavedSetting = {
       id: this.generateId(),
       name: name.trim(),
@@ -59,7 +51,7 @@ export class SettingsService {
   /**
    * Get all saved settings
    */
-  getSettingsHistory(): SettingsHistory {
+  getSettingsHistory(): ExtendedSettingsHistory {
     try {
       const stored = localStorage.getItem(this.HISTORY_KEY);
       if (stored) {

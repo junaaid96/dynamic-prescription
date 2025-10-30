@@ -1,11 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BodySection, LayoutConfig } from '../components/comprehensive-layout.component';
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-}
+import { BodySection, LayoutConfig, ValidationResult } from '../models/section.model';
 
 @Injectable({
   providedIn: 'root'
@@ -132,10 +126,6 @@ export class ValidationService {
   validateAllSections(sections: BodySection[]): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
-
-    if (sections.length === 0) {
-      warnings.push('No content sections added');
-    }
 
     // Check for overlapping sections
     for (let i = 0; i < sections.length; i++) {

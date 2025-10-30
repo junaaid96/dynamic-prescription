@@ -1,74 +1,38 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
-import { Section, SectionColumn } from '../models/section.model';
-import { SettingsService, SavedSetting } from '../services/settings.service';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, AfterViewChecked } from '@angular/core';
+import {
+  Section,
+  SectionColumn,
+  BodySection,
+  LayoutConfig,
+  PageType,
+  PaperSize,
+  SavedSetting,
+  ValidationResult,
+  TextAlign,
+  FontWeight,
+  SectionStyle
+} from '../models/section.model';
+import { SettingsService } from '../services/settings.service';
 import { ValidationService } from '../services/validation.service';
 import { ResponsiveService, ScreenSize } from '../services/responsive.service';
-// TinyMCE handles all text formatting - removed text selection and formatting imports
 import { Subscription } from 'rxjs';
-import { CdkDragDrop, CdkDragMove } from '@angular/cdk/drag-drop';
-
-export interface LayoutConfig {
-  pageType: 'A4' | 'A5' | 'Letter' | 'Legal' | 'Custom';
-  totalWidth: number;
-  totalHeight: number;
-  leftMargin: number;
-  rightMargin: number;
-  topMargin: number;
-  bottomMargin: number;
-  leftPadding: number;
-  rightPadding: number;
-  topPadding: number;
-  bottomPadding: number;
-  headerHeight: number;
-  footerHeight: number;
-  columnLayout: {
-    column1: number;
-    column2: number;
-    column3: number;
-  };
-  bodySection: {
-    leftMargin: number;
-    rightMargin: number;
-    topMargin: number;
-    bottomMargin: number;
-    separatorLine: boolean;
-    bottomLine: boolean;
-  };
-}
-
-export interface BodySection {
-  id: string;
-  type: 'diagnostic' | 'prescription' | 'custom' | 'patient';
-  name: string;
-  content: string;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-  isManuallyResized?: boolean; // Flag to track if section was manually resized
-  style: {
-    fontSize: number;
-    fontWeight: string;
-    textAlign: string;
-    fontColor: string;
-    padding: number;
-    margin: number;
-  };
-}
+import interact from 'interactjs';
 
 // Predefined paper sizes in inches
-const PAPER_SIZES = {
+const PAPER_SIZES: Record<PageType, PaperSize> = {
   A4: { width: 8.27, height: 11.69 },
   A5: { width: 5.83, height: 8.27 },
   Letter: { width: 8.5, height: 11 },
   Legal: { width: 8.5, height: 14 },
   Custom: { width: 8.5, height: 11 }
-};
+} as const;
 
 @Component({
   selector: 'app-comprehensive-layout',
   templateUrl: './comprehensive-layout.component.html',
   styleUrls: ['./comprehensive-layout.component.css']
 })
-export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterViewInit {
+export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {
   // Convert inches to pixels (assuming 96 DPI)
   private readonly INCH_TO_PX = 96;
 
@@ -109,59 +73,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     }
   };
 
-  // Default section configurations with realistic mock data
-  private readonly DEFAULT_SECTIONS: BodySection[] = [
-    {
-      id: 'patient-1',
-      type: 'patient',
-      name: 'Patient Information',
-      content: 'P.ID: RX-2024-001452 | Date: January 15, 2024 | Name: Sarah Johnson | Age: 34 years | Gender: Female | Department: Internal Medicine | Contact: +1 (555) 123-4567 | Address: 123 Main Street, Springfield, IL 62701',
-      position: { x: 0, y: 0 },
-      size: { width: 100, height: 8 }, // Will be calculated dynamically
-      style: {
-        fontSize: 11,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        fontColor: '#000000',
-        padding: 8,
-        margin: 3
-      }
-    },
-    {
-      id: 'diagnostic-1',
-      type: 'diagnostic',
-      name: 'Diagnosis',
-      content: '<p><strong>Chief Complaints</strong></p><ul><li></li><li></li></ul><p><strong>Vitals</strong></p><ul><li></li><li></li></ul><p><strong>Investigations</strong></p><ul><li></li><li></li></ul>',
-      position: { x: 0, y: 15 },
-      size: { width: 45, height: 25 }, // Will be calculated dynamically
-      style: {
-        fontSize: 11,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        fontColor: '#000000',
-        padding: 8,
-        margin: 3
-      }
-    },
-    {
-      id: 'prescription-1',
-      type: 'prescription',
-      name: 'Prescription',
-      content: '<p><strong>Rx</strong></p><p></p>',
-      position: { x: 50, y: 15 },
-      size: { width: 45, height: 25 }, // Will be calculated dynamically
-      style: {
-        fontSize: 11,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        fontColor: '#000000',
-        padding: 8,
-        margin: 3
-      }
-    }
-  ];
-
-  // Body sections for selection - initialized with default values
+  // Clean start for bodySections
   bodySections: BodySection[] = [];
 
   selectedSection: BodySection | null = null;
@@ -169,6 +81,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   // Settings management
   showSettingsModal = false;
   showLoadSettingsModal = false;
+  showPrintPreviewModal = false;
   settingsHistory: SavedSetting[] = [];
   newSettingName = '';
   newSettingDescription = '';
@@ -200,59 +113,8 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   ];
 
   // Header and Footer column content with realistic mock data (2-column layout)
-  headerColumns = [
-    { 
-      content: 'Dr. Michael Rodriguez\nMBBS, MD (Internal Medicine)\nInternal Medicine Specialist\nSenior Consultant Physician\nSpringfield Medical Center\nChamber: Room 205, Level 2\nMon-Fri: 9:00 AM - 5:00 PM\nSat: 9:00 AM - 1:00 PM', 
-      width: 50,
-      style: {
-        fontSize: 11,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        fontColor: '#000000',
-        padding: 8,
-        margin: 3
-      }
-    },
-    { 
-      content: 'Springfield Medical Center\n123 Healthcare Boulevard\nSpringfield, IL 62701\nPhone: (555) 123-CARE (2273)\nFax: (555) 123-4568\nEmail: info@springfieldmedical.com\nWebsite: www.springfieldmedical.com\n\nEmergency: (555) 911-HELP', 
-      width: 50,
-      style: {
-        fontSize: 11,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        fontColor: '#000000',
-        padding: 8,
-        margin: 3
-      }
-    }
-  ];
-
-  footerColumns = [
-    { 
-      content: 'Doctor Signature:\n\n_________________________\nDr. Michael Rodriguez, MD\nRegistration No: IL-MD-2015-4789', 
-      width: 50,
-      style: {
-        fontSize: 11,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        fontColor: '#000000',
-        padding: 8,
-        margin: 3
-      }
-    },
-    { 
-      content: 'Date: January 15, 2024\n\nNext Appointment: _________________\n\nContact for queries: (555) 123-CARE\n\n[Prescription Barcode] RX-2024-001452\nValid for 30 days from date of issue\nPresent this prescription at any licensed pharmacy', 
-      width: 50,
-      style: {
-        fontSize: 11,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        fontColor: '#000000',
-        padding: 8,
-        margin: 3
-      }
-    }
-  ];
+  headerColumns: SectionColumn[] = [];
+  footerColumns: SectionColumn[] = [];
 
   // Editor states removed - using simple text editing now
   
@@ -263,24 +125,17 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   // Store bound keyboard handler for proper cleanup
   private boundKeyHandler = this.handleKeyboardShortcuts.bind(this);
 
-  // Drag and drop properties
-  @ViewChild('bodyArea', { static: false }) bodyArea?: ElementRef;
-  isDragging = false;
-  dragStartPosition = { x: 0, y: 0 };
-  dragStartSectionPosition = { x: 0, y: 0 };
-  currentMousePosition = { x: 0, y: 0 };
-  dragOffsetX = 0;
-  dragOffsetY = 0;
+  // Dynamic print style element
+  private printStyleElement: HTMLStyleElement | null = null;
 
-  // Resize properties
-  isResizing = false;
-  resizeHandle = '';
-  resizeStartPosition = { x: 0, y: 0 };
-  resizeStartSize = { width: 0, height: 0 };
-  resizeStartSectionPosition = { x: 0, y: 0 };
+  // Body area reference for interact.js
+  @ViewChild('bodyArea', { static: false }) bodyArea?: ElementRef;
 
   // Validation properties
-  validationResults: any = null;
+  validationResults: { layout: ValidationResult; sections: ValidationResult } | null = null;
+
+  private _lastSectionsVersion = 0;
+  private _sectionsVersion = 0;
 
   constructor(
     private settingsService: SettingsService,
@@ -290,13 +145,15 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
 
   ngOnInit(): void {
     // Initialize body sections with proper deep copy of defaults
-    this.bodySections = JSON.parse(JSON.stringify(this.DEFAULT_SECTIONS));
-    
+    this.bodySections = JSON.parse(JSON.stringify([]));
+    this._sectionsVersion++; // Increment version after initialization
+
     this.updateLayout();
     this.updateColumnContent();
     this.validateAllSections();
     this.setupKeyboardShortcuts();
-    
+    this.updatePrintPageSize(); // Initialize print page size
+
     // Subscribe to screen size changes
     this.screenSizeSubscription = this.responsiveService.screenSize$.subscribe(
       screenSize => {
@@ -304,12 +161,12 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
         this.handleResponsiveLayout(screenSize);
       }
     );
-    
+
     // Get initial screen size
     this.currentScreenSize = this.responsiveService.getCurrentScreenSize();
-    
+
     // Debug: Log initial default sections
-    console.log('Initial DEFAULT_SECTIONS:', this.DEFAULT_SECTIONS);
+    console.log('Initial DEFAULT_SECTIONS:', []);
     console.log('Initial bodySections:', this.bodySections);
   }
 
@@ -318,10 +175,11 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     if (this.screenSizeSubscription) {
       this.screenSizeSubscription.unsubscribe();
     }
-    
-    // Clean up drag and resize event listeners
-    this.endDrag();
-    this.endResize();
+
+    // Clean up dynamic print style element
+    if (this.printStyleElement && this.printStyleElement.parentNode) {
+      this.printStyleElement.parentNode.removeChild(this.printStyleElement);
+    }
   }
 
   ngAfterViewInit(): void {
@@ -329,20 +187,239 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     // to ensure all content is loaded
     setTimeout(() => {
       this.updateAllSectionsDynamicSize();
+      this.initializeInteractJS();
     }, 100);
-    
+
     setTimeout(() => {
       this.updateAllSectionsDynamicSize();
     }, 500);
-    
+
     setTimeout(() => {
       this.updateAllSectionsDynamicSize();
     }, 1000);
   }
 
+  ngAfterViewChecked(): void {
+    if (this._lastSectionsVersion !== this._sectionsVersion) {
+      this.initializeInteractJS();
+      this._lastSectionsVersion = this._sectionsVersion;
+    }
+  }
+
+  // Initialize interact.js for all body sections with full features
+  private initializeInteractJS(): void {
+    if (!this.bodyArea) return;
+
+    const bodyAreaElement = this.bodyArea.nativeElement;
+    const bodyAreaRect = bodyAreaElement.getBoundingClientRect();
+
+    // Grid size for snapping (5% of body area)
+    const gridX = bodyAreaRect.width * 0.05;
+    const gridY = bodyAreaRect.height * 0.05;
+
+    // Get all body section elements
+    const sectionElements = bodyAreaElement.querySelectorAll('.body-section-element');
+
+    sectionElements.forEach((element: Element) => {
+      const htmlElement = element as HTMLElement;
+      const sectionId = htmlElement.getAttribute('data-section-id');
+      if (!sectionId) return;
+
+      // Remove existing interact instance if any
+      interact(htmlElement).unset();
+
+      // Initialize position tracking
+      let dragStartX = 0;
+      let dragStartY = 0;
+
+      // Setup draggable with snapping and collision detection
+      interact(htmlElement)
+        .draggable({
+          listeners: {
+            start: (event) => {
+              const section = this.bodySections.find(s => s.id === sectionId);
+              if (section) {
+                dragStartX = section.position.x;
+                dragStartY = section.position.y;
+              }
+              htmlElement.style.zIndex = '1000';
+            },
+            move: (event) => {
+              const section = this.bodySections.find(s => s.id === sectionId);
+              if (!section) return;
+
+              const bodyRect = bodyAreaElement.getBoundingClientRect();
+
+              // Calculate new position in percentage
+              const deltaXPercent = (event.dx / bodyRect.width) * 100;
+              const deltaYPercent = (event.dy / bodyRect.height) * 100;
+
+              let newX = section.position.x + deltaXPercent;
+              let newY = section.position.y + deltaYPercent;
+
+              // Ensure boundaries
+              newX = Math.max(0, Math.min(100 - section.size.width, newX));
+              newY = Math.max(0, Math.min(100 - section.size.height, newY));
+
+              // Check collision
+              const wouldCollide = this.checkCollision(section, newX, newY, section.size.width, section.size.height);
+
+              if (!wouldCollide) {
+                section.position.x = newX;
+                section.position.y = newY;
+
+                // Trigger change detection
+                const index = this.bodySections.findIndex(s => s.id === sectionId);
+                if (index !== -1) {
+                  this.bodySections[index] = { ...section };
+                  this.bodySections = [...this.bodySections];
+                  this._sectionsVersion++; // Increment version after position change
+                }
+              }
+            },
+            end: (event) => {
+              htmlElement.style.zIndex = '';
+              const section = this.bodySections.find(s => s.id === sectionId);
+              if (section) {
+                // Round to nearest 0.5%
+                section.position.x = Math.round(section.position.x * 2) / 2;
+                section.position.y = Math.round(section.position.y * 2) / 2;
+
+                const index = this.bodySections.findIndex(s => s.id === sectionId);
+                if (index !== -1) {
+                  this.bodySections[index] = { ...section };
+                  this.bodySections = [...this.bodySections];
+                  this._sectionsVersion++; // Increment version after position change
+                }
+              }
+            }
+          },
+          modifiers: [
+            interact.modifiers.snap({
+              targets: [
+                interact.snappers.grid({ x: gridX, y: gridY })
+              ],
+              range: gridX,
+              relativePoints: [{ x: 0, y: 0 }]
+            })
+          ]
+        })
+        .resizable({
+          edges: { left: true, right: true, bottom: true, top: true },
+          listeners: {
+            start: (event) => {
+              htmlElement.style.zIndex = '1000';
+            },
+            move: (event) => {
+              const section = this.bodySections.find(s => s.id === sectionId);
+              if (!section) return;
+
+              const bodyRect = bodyAreaElement.getBoundingClientRect();
+
+              // Calculate size changes
+              let newWidth = section.size.width;
+              let newHeight = section.size.height;
+              let newX = section.position.x;
+              let newY = section.position.y;
+
+              // Handle width changes
+              if (event.deltaRect) {
+                const widthDelta = ((event.deltaRect.right + event.deltaRect.left) / bodyRect.width) * 100;
+                const heightDelta = ((event.deltaRect.bottom + event.deltaRect.top) / bodyRect.height) * 100;
+
+                newWidth = section.size.width + widthDelta;
+                newHeight = section.size.height + heightDelta;
+
+                // Adjust position if resizing from left or top
+                if (event.deltaRect.left !== 0) {
+                  newX = section.position.x - (event.deltaRect.left / bodyRect.width) * 100;
+                }
+                if (event.deltaRect.top !== 0) {
+                  newY = section.position.y - (event.deltaRect.top / bodyRect.height) * 100;
+                }
+              }
+
+              // Apply constraints
+              newWidth = Math.max(10, Math.min(100, newWidth));
+              newHeight = Math.max(5, Math.min(100, newHeight));
+              newX = Math.max(0, Math.min(100 - newWidth, newX));
+              newY = Math.max(0, Math.min(100 - newHeight, newY));
+
+              // Check collision
+              const wouldCollide = this.checkCollision(section, newX, newY, newWidth, newHeight);
+
+              if (!wouldCollide) {
+                section.position.x = newX;
+                section.position.y = newY;
+                section.size.width = newWidth;
+                section.size.height = newHeight;
+                section.isManuallyResized = true;
+
+                // Trigger change detection
+                const index = this.bodySections.findIndex(s => s.id === sectionId);
+                if (index !== -1) {
+                  this.bodySections[index] = { ...section };
+                  this.bodySections = [...this.bodySections];
+                  this._sectionsVersion++; // Increment version after size change
+                }
+              }
+            },
+            end: (event) => {
+              htmlElement.style.zIndex = '';
+              const section = this.bodySections.find(s => s.id === sectionId);
+              if (section) {
+                // Round values
+                section.position.x = Math.round(section.position.x * 2) / 2;
+                section.position.y = Math.round(section.position.y * 2) / 2;
+                section.size.width = Math.round(section.size.width * 2) / 2;
+                section.size.height = Math.round(section.size.height * 2) / 2;
+
+                const index = this.bodySections.findIndex(s => s.id === sectionId);
+                if (index !== -1) {
+                  this.bodySections[index] = { ...section };
+                  this.bodySections = [...this.bodySections];
+                  this._sectionsVersion++; // Increment version after size change
+                }
+              }
+            }
+          },
+          modifiers: [
+            interact.modifiers.snapSize({
+              targets: [
+                interact.snappers.grid({ width: gridX, height: gridY })
+              ]
+            })
+          ]
+        });
+    });
+  }
+
+
+  // Check if a section would collide with other sections
+  private checkCollision(currentSection: BodySection, x: number, y: number, width: number, height: number): boolean {
+    // Check collision with other sections
+    for (const section of this.bodySections) {
+      if (section.id === currentSection.id) continue;
+
+      // Check if rectangles overlap
+      const overlap = !(
+        x + width <= section.position.x ||
+        x >= section.position.x + section.size.width ||
+        y + height <= section.position.y ||
+        y >= section.position.y + section.size.height
+      );
+
+      if (overlap) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private handleResponsiveLayout(screenSize: ScreenSize): void {
     const config = this.responsiveService.getOptimalConfigForScreen();
-    
+
     // Adjust layout based on screen size
     if (screenSize.isMobile) {
       // Mobile optimizations
@@ -374,7 +451,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       case 'p':
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
-          this.printPrescription();
+          this.openPrintPreview();
         }
         break;
       case 'delete':
@@ -391,24 +468,81 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   }
 
   // Helper method to get paper dimensions safely
-  getPaperDimensions(pageTypeId: string): { width: number; height: number } | null {
+  getPaperDimensions(pageTypeId: string): PaperSize | null {
     if (pageTypeId === 'Custom') return null;
-    return PAPER_SIZES[pageTypeId as keyof typeof PAPER_SIZES] || null;
+    if (this.isValidPageType(pageTypeId) && pageTypeId !== 'Custom') {
+      return PAPER_SIZES[pageTypeId];
+    }
+    return null;
   }
 
   // Update page type and automatically adjust dimensions
   updatePageType(pageType: string): void {
-    if (pageType === 'A4' || pageType === 'A5' || pageType === 'Letter' || pageType === 'Legal' || pageType === 'Custom') {
+    if (this.isValidPageType(pageType)) {
       this.config.pageType = pageType;
-      
+
       if (pageType !== 'Custom') {
-        const paperSize = PAPER_SIZES[pageType as keyof typeof PAPER_SIZES];
+        const paperSize = PAPER_SIZES[pageType];
         this.config.totalWidth = paperSize.width;
         this.config.totalHeight = paperSize.height;
       }
-      
+
       this.updateLayout();
+      this.updatePrintPageSize(); // Update print @page size when page type changes
     }
+  }
+
+  // Type guard for PageType
+  private isValidPageType(pageType: string): pageType is PageType {
+    return ['A4', 'A5', 'Letter', 'Legal', 'Custom'].includes(pageType);
+  }
+
+  /**
+   * Dynamically updates the @page CSS rule for printing
+   * This ensures the printed/PDF output matches the selected page size
+   */
+  private updatePrintPageSize(): void {
+    // Remove existing print style element if it exists
+    if (this.printStyleElement && this.printStyleElement.parentNode) {
+      this.printStyleElement.parentNode.removeChild(this.printStyleElement);
+    }
+
+    // Create new style element
+    this.printStyleElement = document.createElement('style');
+    this.printStyleElement.id = 'dynamic-print-page-size';
+
+    // Get current page dimensions in inches
+    const width = this.config.totalWidth;
+    const height = this.config.totalHeight;
+
+    // Create CSS with @page rule matching selected paper size
+    const cssContent = `
+      @page {
+        margin: 0;
+        size: ${width}in ${height}in;
+      }
+
+      @media print {
+        html, body {
+          width: ${width}in;
+          height: ${height}in;
+          margin: 0;
+          padding: 0;
+        }
+
+        .total-page-container {
+          width: ${width}in !important;
+          height: ${height}in !important;
+        }
+      }
+    `;
+
+    this.printStyleElement.textContent = cssContent;
+
+    // Append to document head
+    document.head.appendChild(this.printStyleElement);
+
+    console.log(`Print @page size updated: ${width}in × ${height}in (${this.config.pageType})`);
   }
 
   updateLayout(): void {
@@ -424,7 +558,10 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     this.layout.bottomPadding = this.config.bottomPadding * this.INCH_TO_PX;
     this.layout.headerHeight = this.config.headerHeight * this.INCH_TO_PX;
     this.layout.footerHeight = this.config.footerHeight * this.INCH_TO_PX;
-    
+
+    // Update print page size when layout dimensions change
+    this.updatePrintPageSize();
+
     // Validate layout after update
     this.validateAndNotify();
   }
@@ -482,13 +619,13 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     // Update header columns based on column layout (maintain mock data)
     this.headerColumns = [];
     if (this.config.columnLayout.column1 > 0) {
-      this.headerColumns.push({ 
-        content: 'Dr. Michael Rodriguez\nMBBS, MD (Internal Medicine)\nInternal Medicine Specialist\nSenior Consultant Physician\nSpringfield Medical Center\nChamber: Room 205, Level 2\nMon-Fri: 9:00 AM - 5:00 PM\nSat: 9:00 AM - 1:00 PM', 
+      this.headerColumns.push({
+        content: 'Dr. Michael Rodriguez\nMBBS, MD (Internal Medicine)\nInternal Medicine Specialist\nSenior Consultant Physician\nSpringfield Medical Center\nChamber: Room 205, Level 2\nMon-Fri: 9:00 AM - 5:00 PM\nSat: 9:00 AM - 1:00 PM',
         width: this.config.columnLayout.column1,
         style: {
           fontSize: 11,
-          fontWeight: 'normal',
-          textAlign: 'left',
+          fontWeight: 'normal' as FontWeight,
+          textAlign: 'left' as TextAlign,
           fontColor: '#000000',
           padding: 8,
           margin: 3
@@ -496,13 +633,13 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       });
     }
     if (this.config.columnLayout.column2 > 0) {
-      this.headerColumns.push({ 
-        content: '[QR Code]\nScan for\nVerification', 
+      this.headerColumns.push({
+        content: '[QR Code]\nScan for\nVerification',
         width: this.config.columnLayout.column2,
         style: {
           fontSize: 11,
-          fontWeight: 'normal',
-          textAlign: 'center',
+          fontWeight: 'normal' as FontWeight,
+          textAlign: 'center' as TextAlign,
           fontColor: '#000000',
           padding: 8,
           margin: 3
@@ -510,13 +647,13 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       });
     }
     if (this.config.columnLayout.column3 > 0) {
-      this.headerColumns.push({ 
-        content: 'Springfield Medical Center\n123 Healthcare Boulevard\nSpringfield, IL 62701\nPhone: (555) 123-CARE (2273)\nFax: (555) 123-4568\nEmail: info@springfieldmedical.com\nWebsite: www.springfieldmedical.com\n\nEmergency: (555) 911-HELP', 
+      this.headerColumns.push({
+        content: 'Springfield Medical Center\n123 Healthcare Boulevard\nSpringfield, IL 62701\nPhone: (555) 123-CARE (2273)\nFax: (555) 123-4568\nEmail: info@springfieldmedical.com\nWebsite: www.springfieldmedical.com\n\nEmergency: (555) 911-HELP',
         width: this.config.columnLayout.column3,
         style: {
           fontSize: 11,
-          fontWeight: 'normal',
-          textAlign: 'left',
+          fontWeight: 'normal' as FontWeight,
+          textAlign: 'left' as TextAlign,
           fontColor: '#000000',
           padding: 8,
           margin: 3
@@ -527,13 +664,13 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     // Update footer columns based on column layout (maintain mock data)
     this.footerColumns = [];
     if (this.config.columnLayout.column1 > 0) {
-      this.footerColumns.push({ 
-        content: 'Doctor Signature:\n\n_________________________\nDr. Michael Rodriguez, MD\nRegistration No: IL-MD-2015-4789', 
+      this.footerColumns.push({
+        content: 'Doctor Signature:\n\n_________________________\nDr. Michael Rodriguez, MD\nRegistration No: IL-MD-2015-4789',
         width: this.config.columnLayout.column1,
         style: {
           fontSize: 11,
-          fontWeight: 'normal',
-          textAlign: 'left',
+          fontWeight: 'normal' as FontWeight,
+          textAlign: 'left' as TextAlign,
           fontColor: '#000000',
           padding: 8,
           margin: 3
@@ -541,13 +678,13 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       });
     }
     if (this.config.columnLayout.column2 > 0) {
-      this.footerColumns.push({ 
-        content: 'Date: January 15, 2024\n\nNext Appointment:\n_________________', 
+      this.footerColumns.push({
+        content: 'Date: January 15, 2024\n\nNext Appointment:\n_________________',
         width: this.config.columnLayout.column2,
         style: {
           fontSize: 11,
-          fontWeight: 'normal',
-          textAlign: 'center',
+          fontWeight: 'normal' as FontWeight,
+          textAlign: 'center' as TextAlign,
           fontColor: '#000000',
           padding: 8,
           margin: 3
@@ -555,13 +692,13 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       });
     }
     if (this.config.columnLayout.column3 > 0) {
-      this.footerColumns.push({ 
-        content: 'Date: January 15, 2024\n\nNext Appointment: _________________\n\nContact for queries: (555) 123-CARE\n\n[Prescription Barcode] RX-2024-001452\nValid for 30 days from date of issue\nPresent this prescription at any licensed pharmacy', 
+      this.footerColumns.push({
+        content: 'Date: January 15, 2024\n\nNext Appointment: _________________\n\nContact for queries: (555) 123-CARE\n\n[Prescription Barcode] RX-2024-001452\nValid for 30 days from date of issue\nPresent this prescription at any licensed pharmacy',
         width: this.config.columnLayout.column3,
         style: {
           fontSize: 11,
-          fontWeight: 'normal',
-          textAlign: 'left',
+          fontWeight: 'normal' as FontWeight,
+          textAlign: 'left' as TextAlign,
           fontColor: '#000000',
           padding: 8,
           margin: 3
@@ -578,9 +715,20 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     return text.replace(/\n/g, '<br>');
   }
 
-  // Print prescription method
-  printPrescription(): void {
-    window.print();
+  // Print preview methods
+  openPrintPreview(): void {
+    this.showPrintPreviewModal = true;
+  }
+
+  closePrintPreview(): void {
+    this.showPrintPreviewModal = false;
+  }
+
+  printFromPreview(): void {
+    this.closePrintPreview();
+    setTimeout(() => {
+      window.print();
+    }, 100);
   }
 
 
@@ -597,11 +745,11 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
   }
 
   // Get default style for sections
-  private getDefaultStyle() {
+  private getDefaultStyle(): SectionStyle {
     return {
       fontSize: 12,
-      fontWeight: 'normal',
-      textAlign: 'left',
+      fontWeight: 'normal' as FontWeight,
+      textAlign: 'left' as TextAlign,
       fontColor: '#000000',
       padding: 10,
       margin: 5
@@ -613,6 +761,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
 
   deleteBodySection(sectionId: string): void {
     this.bodySections = this.bodySections.filter(s => s.id !== sectionId);
+    this._sectionsVersion++; // Increment version after deletion
     if (this.selectedSection?.id === sectionId) {
       this.selectedSection = null;
     }
@@ -625,82 +774,33 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       position: { x: section.position.x + 5, y: section.position.y + 5 }
     };
     this.bodySections.push(duplicated);
+    this._sectionsVersion++; // Increment version after duplication
   }
 
   // Restore default values for a specific section
   restoreSectionDefaults(sectionId: string): void {
-    console.log('=== RESTORE DEFAULTS CALLED ===');
-    console.log('Section ID:', sectionId);
-    console.log('All body sections:', this.bodySections);
-    
     const section = this.bodySections.find(s => s.id === sectionId);
-    if (section) {
-      console.log('Found section:', section);
-      const defaultSection = this.DEFAULT_SECTIONS.find(ds => ds.type === section.type);
-      if (defaultSection) {
-        console.log('Found default section for type:', section.type, defaultSection);
-        console.log('Before restore:', { 
-          content: section.content, 
-          position: section.position, 
-          size: section.size, 
-          style: section.style 
-        });
-        console.log('Default values:', { 
-          content: defaultSection.content, 
-          position: defaultSection.position, 
-          size: defaultSection.size, 
-          style: defaultSection.style 
-        });
-        
-        // Restore all default values including position and size
-        section.content = defaultSection.content;
-        section.position = { ...defaultSection.position };
-        section.size = { ...defaultSection.size };
-        section.style = { ...defaultSection.style };
-        
-        console.log('After restore:', { 
-          content: section.content, 
-          position: section.position, 
-          size: section.size, 
-          style: section.style 
-        });
-        
-        // Force Angular to detect changes by creating a new array reference
-        this.bodySections = [...this.bodySections];
-        
-        // Update the selected section reference if it's the same section
-        if (this.selectedSection && this.selectedSection.id === sectionId) {
-          this.selectedSection = { ...section };
-        }
-        
-        console.log('Final bodySections array:', this.bodySections);
-        console.log('Final selectedSection:', this.selectedSection);
-        
-        this.showNotification(`Default values restored for ${section.name}`, 'success');
-      } else {
-        console.error('No default section found for type:', section.type);
-        this.showNotification(`No default values found for ${section.name}`, 'error');
-      }
-    } else {
-      console.error('Section not found with ID:', sectionId);
-      this.showNotification('Section not found', 'error');
-    }
+    if (!section) return;
+    // REMOVE default lookup logic, so we skip defaultSection fallback
+    // Optionally, just clear out content/position/size/style or skip entirely
+    // Here we will just do nothing for now (or show a toast)
+    this.showNotification('No defaults to restore for this section.', 'info');
   }
 
   // Get default values for a section type
-  getDefaultValuesForType(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): Partial<BodySection> {
-    const defaultSection = this.DEFAULT_SECTIONS.find(ds => ds.type === type);
-    if (defaultSection) {
-      return {
-        content: defaultSection.content,
-        style: { ...defaultSection.style }
-      };
-    }
-    return {
-      content: this.getDefaultContent(type),
-      style: this.getDefaultStyle()
-    };
-  }
+  // getDefaultValuesForType(type: 'diagnostic' | 'prescription' | 'custom' | 'patient'): Partial<BodySection> {
+  //   const defaultSection = this.DEFAULT_SECTIONS.find(ds => ds.type === type);
+  //   if (defaultSection) {
+  //     return {
+  //       content: defaultSection.content,
+  //       style: { ...defaultSection.style }
+  //     };
+  //   }
+  //   return {
+  //     content: this.getDefaultContent(type),
+  //     style: this.getDefaultStyle()
+  //   };
+  // }
 
 
   private validateConfiguration(): boolean {
@@ -825,7 +925,8 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       };
 
       // Reset body sections to default values
-      this.bodySections = JSON.parse(JSON.stringify(this.DEFAULT_SECTIONS));
+      this.bodySections = JSON.parse(JSON.stringify([]));
+      this._sectionsVersion++; // Increment version after reset
 
       this.selectedSection = null;
       this.updateLayout();
@@ -1009,6 +1110,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       
       if (configData.bodySections) {
         this.bodySections = configData.bodySections;
+        this._sectionsVersion++; // Increment version after loading bodySections
       }
       
       if (configData.headerColumns) {
@@ -1101,12 +1203,14 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     validated.style.margin = Math.max(0, Math.min(20, validated.style.margin));
     
     // Ensure textAlign is valid
-    if (!['left', 'center', 'right'].includes(validated.style.textAlign)) {
+    const validAlignments: TextAlign[] = ['left', 'center', 'right', 'justify'];
+    if (!validAlignments.includes(validated.style.textAlign as TextAlign)) {
       validated.style.textAlign = 'left';
     }
-    
-    // Ensure fontWeight is valid
-    if (!['normal', 'bold', 'italic'].includes(validated.style.fontWeight)) {
+
+    // Ensure fontWeight is valid (note: 'italic' is actually font-style in CSS, but kept for backwards compatibility)
+    const validWeights: FontWeight[] = ['normal', 'bold', 'italic'];
+    if (!validWeights.includes(validated.style.fontWeight as FontWeight)) {
       validated.style.fontWeight = 'normal';
     }
     
@@ -1118,27 +1222,6 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     return validated;
   }
 
-  // Prevent overlap between sections
-  private preventOverlap(section: BodySection): BodySection {
-    const adjusted = { ...section };
-    const tolerance = 1; // 1% tolerance for overlap detection
-    
-    for (const otherSection of this.bodySections) {
-      if (otherSection.id === section.id) continue;
-      
-      const overlap = this.validationService.sectionsOverlap(adjusted, otherSection, tolerance);
-      if (overlap) {
-        // Calculate minimum adjustment needed
-        const adjustment = this.validationService.resolveOverlap(adjusted, otherSection);
-        if (adjustment) {
-          adjusted.position.x = adjustment.x;
-          adjusted.position.y = adjustment.y;
-        }
-      }
-    }
-    
-    return adjusted;
-  }
 
   // Real-time validation and notification
   private validateAndNotify(): void {
@@ -1191,306 +1274,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     this.bodySections = this.bodySections.map(section => this.validateSectionValues(section));
   }
 
-  // Custom Mouse-Based Drag and Drop Methods
-  onMouseDown(event: MouseEvent, section: BodySection): void {
-    // Don't start drag on regular section click
-    event.stopPropagation();
-    this.selectBodySection(section);
-  }
 
-  onDragHandleMouseDown(event: MouseEvent, section: BodySection): void {
-    event.preventDefault();
-    event.stopPropagation();
-    
-    this.isDragging = true;
-    this.selectedSection = section;
-    
-    // Store initial mouse position
-    this.dragStartPosition = {
-      x: event.clientX,
-      y: event.clientY
-    };
-    
-    // Store initial section position
-    this.dragStartSectionPosition = {
-      x: section.position.x,
-      y: section.position.y
-    };
-    
-    // Add global mouse move and up listeners
-    document.addEventListener('mousemove', this.onDocumentMouseMove.bind(this));
-    document.addEventListener('mouseup', this.onDocumentMouseUp.bind(this));
-    
-    // Prevent text selection
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = 'grabbing';
-  }
-
-  onMouseMove(event: MouseEvent): void {
-    // This handles mouse movement within the body area
-    if (this.isDragging) {
-      this.updateDragPosition(event);
-    }
-  }
-
-  onMouseUp(event: MouseEvent): void {
-    // This handles mouse up within the body area
-    if (this.isDragging) {
-      this.endDrag();
-    }
-  }
-
-  private onDocumentMouseMove(event: MouseEvent): void {
-    if (this.isDragging) {
-      this.updateDragPosition(event);
-    }
-  }
-
-  private onDocumentMouseUp(event: MouseEvent): void {
-    if (this.isDragging) {
-      this.endDrag();
-    }
-  }
-
-  private updateDragPosition(event: MouseEvent): void {
-    if (!this.bodyArea || !this.selectedSection) return;
-
-    // Calculate mouse movement delta
-    const deltaX = event.clientX - this.dragStartPosition.x;
-    const deltaY = event.clientY - this.dragStartPosition.y;
-    
-    // Get body area dimensions
-    const bodyAreaRect = this.bodyArea.nativeElement.getBoundingClientRect();
-    
-    // Convert pixel delta to percentage delta
-    const deltaPercentX = (deltaX / bodyAreaRect.width) * 100;
-    const deltaPercentY = (deltaY / bodyAreaRect.height) * 100;
-    
-    // Calculate new position
-    const newX = this.dragStartSectionPosition.x + deltaPercentX;
-    const newY = this.dragStartSectionPosition.y + deltaPercentY;
-    
-    // Apply bounds checking
-    const boundedX = Math.max(0, Math.min(90, newX));
-    const boundedY = Math.max(0, Math.min(90, newY));
-    
-    // Update section position in real-time
-    this.selectedSection.position.x = Math.round(boundedX * 100) / 100;
-    this.selectedSection.position.y = Math.round(boundedY * 100) / 100;
-    
-    // Update the section in the array
-    const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
-    if (sectionIndex !== -1) {
-      this.bodySections[sectionIndex] = this.selectedSection;
-    }
-  }
-
-  private endDrag(): void {
-    this.isDragging = false;
-    
-    // Remove global listeners
-    document.removeEventListener('mousemove', this.onDocumentMouseMove.bind(this));
-    document.removeEventListener('mouseup', this.onDocumentMouseUp.bind(this));
-    
-    // Restore normal cursor and text selection
-    document.body.style.userSelect = '';
-    document.body.style.cursor = '';
-    
-    // Validate the final position and prevent overlaps
-    if (this.selectedSection) {
-      this.selectedSection = this.validateSectionValues(this.selectedSection);
-      this.selectedSection = this.preventOverlap(this.selectedSection);
-      
-      // Round positions to nearest 0.5% for cleaner alignment
-      this.selectedSection.position.x = Math.round(this.selectedSection.position.x * 2) / 2;
-      this.selectedSection.position.y = Math.round(this.selectedSection.position.y * 2) / 2;
-      
-      const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
-      if (sectionIndex !== -1) {
-        this.bodySections[sectionIndex] = this.selectedSection;
-      }
-      
-      // Validate all sections after drag
-      this.validateAndNotify();
-    }
-  }
-
-  // Resize Methods
-  onResizeHandleMouseDown(event: MouseEvent, section: BodySection, handle: string): void {
-    event.preventDefault();
-    event.stopPropagation();
-    
-    this.isResizing = true;
-    this.resizeHandle = handle;
-    this.selectedSection = section;
-    
-    // Store initial mouse position
-    this.resizeStartPosition = {
-      x: event.clientX,
-      y: event.clientY
-    };
-    
-    // Store initial section size and position
-    this.resizeStartSize = {
-      width: section.size.width,
-      height: section.size.height
-    };
-    
-    this.resizeStartSectionPosition = {
-      x: section.position.x,
-      y: section.position.y
-    };
-    
-    // Add global mouse move and up listeners
-    document.addEventListener('mousemove', this.onDocumentResizeMouseMove.bind(this));
-    document.addEventListener('mouseup', this.onDocumentResizeMouseUp.bind(this));
-    
-    // Prevent text selection
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = this.getResizeCursor(handle);
-  }
-
-  private onDocumentResizeMouseMove(event: MouseEvent): void {
-    if (this.isResizing) {
-      this.updateResizeSize(event);
-    }
-  }
-
-  private onDocumentResizeMouseUp(event: MouseEvent): void {
-    if (this.isResizing) {
-      this.endResize();
-    }
-  }
-
-  private updateResizeSize(event: MouseEvent): void {
-    if (!this.bodyArea || !this.selectedSection) return;
-
-    // Calculate mouse movement delta
-    const deltaX = event.clientX - this.resizeStartPosition.x;
-    const deltaY = event.clientY - this.resizeStartPosition.y;
-    
-    // Get body area dimensions
-    const bodyAreaRect = this.bodyArea.nativeElement.getBoundingClientRect();
-    
-    // Convert pixel delta to percentage delta
-    const deltaPercentX = (deltaX / bodyAreaRect.width) * 100;
-    const deltaPercentY = (deltaY / bodyAreaRect.height) * 100;
-    
-    // Calculate new size and position based on resize handle
-    let newWidth = this.resizeStartSize.width;
-    let newHeight = this.resizeStartSize.height;
-    let newX = this.resizeStartSectionPosition.x;
-    let newY = this.resizeStartSectionPosition.y;
-
-    switch (this.resizeHandle) {
-      case 'se': // Bottom-right corner
-        newWidth = this.resizeStartSize.width + deltaPercentX;
-        newHeight = this.resizeStartSize.height + deltaPercentY;
-        break;
-      case 'sw': // Bottom-left corner
-        newWidth = this.resizeStartSize.width - deltaPercentX;
-        newHeight = this.resizeStartSize.height + deltaPercentY;
-        newX = this.resizeStartSectionPosition.x + deltaPercentX;
-        break;
-      case 'ne': // Top-right corner
-        newWidth = this.resizeStartSize.width + deltaPercentX;
-        newHeight = this.resizeStartSize.height - deltaPercentY;
-        newY = this.resizeStartSectionPosition.y + deltaPercentY;
-        break;
-      case 'nw': // Top-left corner
-        newWidth = this.resizeStartSize.width - deltaPercentX;
-        newHeight = this.resizeStartSize.height - deltaPercentY;
-        newX = this.resizeStartSectionPosition.x + deltaPercentX;
-        newY = this.resizeStartSectionPosition.y + deltaPercentY;
-        break;
-      case 'n': // Top edge
-        newHeight = this.resizeStartSize.height - deltaPercentY;
-        newY = this.resizeStartSectionPosition.y + deltaPercentY;
-        break;
-      case 's': // Bottom edge
-        newHeight = this.resizeStartSize.height + deltaPercentY;
-        break;
-      case 'e': // Right edge
-        newWidth = this.resizeStartSize.width + deltaPercentX;
-        break;
-      case 'w': // Left edge
-        newWidth = this.resizeStartSize.width - deltaPercentX;
-        newX = this.resizeStartSectionPosition.x + deltaPercentX;
-        break;
-    }
-    
-    // Apply bounds checking
-    const minWidth = 10;
-    const minHeight = 5;
-    const maxWidth = 100;
-    const maxHeight = 95;
-
-    // Ensure minimum and maximum sizes
-    newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-    newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
-    
-    // Ensure position stays within bounds
-    newX = Math.max(0, Math.min(100 - newWidth, newX));
-    newY = Math.max(0, Math.min(100 - newHeight, newY));
-    
-    // Update section properties in real-time
-    this.selectedSection.size.width = Math.round(newWidth * 100) / 100;
-    this.selectedSection.size.height = Math.round(newHeight * 100) / 100;
-    this.selectedSection.position.x = Math.round(newX * 100) / 100;
-    this.selectedSection.position.y = Math.round(newY * 100) / 100;
-    
-    // Update the section in the array
-    const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
-    if (sectionIndex !== -1) {
-      this.bodySections[sectionIndex] = this.selectedSection;
-    }
-  }
-
-  private endResize(): void {
-    this.isResizing = false;
-    this.resizeHandle = '';
-    
-    // Remove global listeners
-    document.removeEventListener('mousemove', this.onDocumentResizeMouseMove.bind(this));
-    document.removeEventListener('mouseup', this.onDocumentResizeMouseUp.bind(this));
-    
-    // Restore normal cursor and text selection
-    document.body.style.userSelect = '';
-    document.body.style.cursor = '';
-    
-    // Validate the final size and position, prevent overlaps
-    if (this.selectedSection) {
-      this.selectedSection = this.validateSectionValues(this.selectedSection);
-      this.selectedSection = this.preventOverlap(this.selectedSection);
-      
-      // Mark section as manually resized to prevent automatic sizing from overriding
-      this.selectedSection.isManuallyResized = true;
-      
-      const sectionIndex = this.bodySections.findIndex(s => s.id === this.selectedSection!.id);
-      if (sectionIndex !== -1) {
-        this.bodySections[sectionIndex] = this.selectedSection;
-      }
-      
-      // Validate all sections after resize
-      this.validateAndNotify();
-      
-      console.log(`Section ${this.selectedSection.id} marked as manually resized`);
-    }
-  }
-
-  private getResizeCursor(handle: string): string {
-    const cursors: { [key: string]: string } = {
-      'nw': 'nw-resize',
-      'n': 'n-resize',
-      'ne': 'ne-resize',
-      'e': 'e-resize',
-      'se': 'se-resize',
-      's': 's-resize',
-      'sw': 'sw-resize',
-      'w': 'w-resize'
-    };
-    return cursors[handle] || 'default';
-  }
 
   // Dynamic Content Sizing Methods
   updateAllSectionsDynamicSize(): void {
@@ -1621,17 +1405,18 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       style: this.getDefaultStyle()
     };
 
-    // Validate and prevent overlaps before adding
+    // Validate before adding (collision is now handled by interact.js)
     const validatedSection = this.validateSectionValues(newSection);
-    const overlapPreventedSection = this.preventOverlap(validatedSection);
 
-    this.bodySections.push(overlapPreventedSection);
-    this.selectedSection = overlapPreventedSection;
-    
-    // Apply dynamic sizing to the new section
+    this.bodySections.push(validatedSection);
+    this._sectionsVersion++; // Increment version after addition
+    this.selectedSection = validatedSection;
+
+    // Apply dynamic sizing to the new section and reinitialize interact.js
     setTimeout(() => {
-      this.updateSectionDynamicSize(overlapPreventedSection);
+      this.updateSectionDynamicSize(validatedSection);
       this.validateAndNotify();
+      this.initializeInteractJS(); // Re-initialize interact.js for all sections including the new one
     }, 100);
   }
 
@@ -1657,6 +1442,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
     const sectionIndex = this.bodySections.findIndex(s => s.id === section.id);
     if (sectionIndex !== -1) {
       this.bodySections[sectionIndex] = section;
+      this._sectionsVersion++; // Increment version after content change
       // Apply dynamic sizing with a small delay to ensure content is updated
       setTimeout(() => {
         this.updateSectionDynamicSize(section);
@@ -1683,6 +1469,7 @@ export class ComprehensiveLayoutComponent implements OnInit, OnDestroy, AfterVie
       if (sectionIndex !== -1) {
         this.bodySections[sectionIndex] = this.selectedSection;
       }
+      this._sectionsVersion++; // Increment version after manual size change
       
       console.log(`Section ${this.selectedSection.id} marked as manually resized via input change`);
     }
