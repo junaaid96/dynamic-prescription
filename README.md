@@ -1,32 +1,34 @@
-# Dynamic Prescription Generator
+# Dynamic Prescription Layout Setup
 
-A modern, responsive Angular application for creating and exporting dynamic medical prescriptions with live preview and PDF export capabilities.
+A modern, responsive Angular application for creating and exporting dynamic medical prescriptions with live preview and browser-based print/PDF export capabilities.
 
 ## 🚀 Features
 
 ### Core Features
 - **Live Preview**: Real-time preview of prescription layout as you design
-- **PDF Export**: High-quality PDF generation with exact layout preservation using jsPDF and html2canvas
-- **Print Preview**: Browser-based print preview functionality
+- **Print/PDF Export**: Browser-based print functionality with dynamic page sizing (users can save as PDF from print dialog)
+- **Print Preview**: Modal-based print preview with exact layout matching
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **Rich Text Editing**: TinyMCE integration for formatted content
-- **Multiple Page Sizes**: Support for A4, A5, Letter, Legal, and Custom sizes
-- **Save/Load Settings**: Save and reuse prescription templates with localStorage persistence
-- **Drag & Drop**: Intuitive drag-and-drop interface for positioning sections
+- **Rich Text Editing**: TinyMCE integration for formatted content editing
+- **Multiple Page Sizes**: Support for A4, A5, Letter, Legal, and Custom sizes with dynamic CSS @page sizing
+- **Save/Load Settings**: Save and reuse prescription templates with localStorage persistence (up to 20 saved configurations)
+- **Drag & Drop**: Intuitive drag-and-drop interface for positioning sections using interact.js
+- **Dynamic Content Sizing**: Automatic height calculation based on content length
 
 ### Advanced Features
-- **HTML2Canvas Integration**: Accurate PDF rendering that matches live preview exactly
-- **Comprehensive Validation**: Real-time validation of layout configurations and content
-- **Responsive Service**: Adaptive layout based on screen size with automatic scaling
-- **HTML Content Processing**: Advanced HTML parsing and text extraction services
-- **Notification System**: Visual feedback for all actions with success/error states
+- **Interact.js Integration**: Smooth drag and resize operations with grid snapping and collision detection
+- **Comprehensive Validation**: Real-time validation of layout configurations and content with error/warning notifications
+- **Responsive Service**: Adaptive layout based on screen size with automatic scaling and breakpoint detection
+- **Diagnosis Fields Component**: Structured diagnosis input with drag-and-drop reordering, nested fields, and HTML formatting
+- **HTML Content Processing**: Advanced HTML parsing and sanitization via SafeHtmlPipe
+- **Notification System**: Visual feedback for all actions with success/error/warning/info states
 - **Keyboard Shortcuts**: 
-  - `Ctrl+P`: Export to PDF
-  - `Ctrl+S`: Save configuration
-  - `Delete`: Delete selected section
+  - `Ctrl+P` / `Cmd+P`: Open print preview
+  - `Delete` / `Backspace`: Delete selected section
   - `Esc`: Deselect section
-- **Auto-validation**: Automatic validation of layout configurations with warnings and errors
-- **Settings Management**: Import/export settings, search functionality, and version control
+- **Auto-validation**: Automatic validation of layout configurations with visual warnings and errors
+- **Settings Management**: Search functionality, version control, and settings history (20 entry limit)
+- **Dynamic Print Styles**: CSS @page rules dynamically generated based on selected paper size
 
 ## 📋 Prerequisites
 
@@ -65,48 +67,58 @@ http://localhost:4200
    - Select page type (A4, A5, Letter, Legal, or Custom)
    - Adjust margins and padding using the configuration panel
    - Set header and footer heights
-   - Configure column layouts for header/footer sections
+   - Configure column layouts for header/footer sections (up to 3 columns)
 
 2. **Add Content Sections**
-   - Click "Add Patient Info" to add patient information section
-   - Click "Add Diagnostic" for diagnosis details
+   - Click "Add Patient Info" to add patient information section (full width by default)
+   - Click "Add Diagnostic" for diagnosis details (uses diagnosis fields component)
    - Click "Add Prescription" for medication details
    - Click "Add Custom" for any additional content
+   - Sections are positioned automatically to avoid overlaps
 
 3. **Edit Content**
    - Click on any section to select it
    - Use the TinyMCE rich text editor to format content
-   - Drag sections to reposition them
-   - Resize sections using the configuration controls
-   - Adjust font size, weight, alignment, and color
+   - Drag sections to reposition them (with grid snapping)
+   - Resize sections by dragging corners/edges or using input fields
+   - Adjust font size, weight, alignment, and color in the configuration panel
+   - Content height automatically adjusts based on content length (unless manually resized)
 
 4. **Configure Header/Footer**
-   - Use the column layout controls to set column widths
-   - Edit header/footer content using the TinyMCE editors
-   - Add clinic information, logos, and contact details
+   - Use the column layout controls to set column widths (must total 100%)
+   - Header and footer columns are populated with default clinic information (editable)
+   - Configure up to 3 columns with percentage-based widths
 
-5. **Export Options**
-   - **Export to PDF**: Generates a downloadable PDF file with exact layout preservation
-   - **Print Preview**: Opens browser print dialog with optimized layout
-   - **Save Settings**: Save current configuration for reuse
-   - **Load Settings**: Load previously saved configurations
+5. **Diagnosis Fields**
+   - When editing a diagnostic section, use the structured diagnosis fields component
+   - Add/remove diagnosis titles (e.g., "Chief Complaints", "Vitals", "Investigations")
+   - Add bullet points under each title
+   - Drag and drop to reorder diagnosis groups
+   - Content automatically converts to formatted HTML
+
+6. **Export Options**
+   - **Print Preview**: Opens modal with preview of print layout (Ctrl+P)
+   - **Print**: Opens browser print dialog where users can save as PDF
+   - **Save Settings**: Save current configuration for reuse (name and description required)
+   - **Load Settings**: Load previously saved configurations with search functionality
+   - **Reset to Defaults**: Clear all configuration and start fresh
 
 ### Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
-| Ctrl+P | Export to PDF |
-| Ctrl+S | Save configuration |
-| Delete | Delete selected section |
+| Ctrl+P / Cmd+P | Open print preview |
+| Delete / Backspace | Delete selected section |
 | Esc | Deselect section |
 
 ### Tips for Best Results
 
-1. **For PDF Export**:
+1. **For Print/PDF Export**:
+   - Use print preview (Ctrl+P) to verify layout before printing
+   - Select "Save as PDF" in browser print dialog for PDF export
    - Ensure all content fits within the visible area
    - Use standard fonts for better compatibility
-   - Test print preview before final export
-   - The application uses html2canvas for pixel-perfect PDF generation
+   - The application dynamically sets CSS @page size to match selected paper size
 
 2. **For Responsive Design**:
    - The layout automatically adjusts for different screen sizes
@@ -116,9 +128,15 @@ http://localhost:4200
 
 3. **For Content Formatting**:
    - Use the TinyMCE toolbar for consistent formatting
-   - Paste content as plain text for cleaner results
-   - Use bullet points and numbering for better organization
-   - HTML content is automatically processed and cleaned
+   - Use diagnosis fields component for structured diagnostic information
+   - HTML content is automatically sanitized and styled
+   - Lists and bullet points are properly formatted
+
+4. **For Section Management**:
+   - Drag sections to reposition (snaps to 5% grid)
+   - Resize sections by dragging corners/edges
+   - Sections automatically avoid collisions during drag
+   - Manual resizing disables automatic height calculation
 
 ## 🏗️ Project Structure
 
@@ -126,120 +144,171 @@ http://localhost:4200
 src/
 ├── app/
 │   ├── components/
-│   │   ├── comprehensive-layout.component.ts
-│   │   ├── comprehensive-layout.component.html
-│   │   ├── comprehensive-layout.component.css
-│   │   └── tinymce-editor.component.ts
+│   │   ├── comprehensive-layout.component.ts    # Main layout component
+│   │   ├── comprehensive-layout.component.html   # Main layout template
+│   │   ├── comprehensive-layout.component.css    # Main layout styles
+│   │   ├── tinymce-editor.component.ts           # TinyMCE wrapper component
+│   │   └── diagnosis-fields.component.ts        # Structured diagnosis input
 │   ├── services/
-│   │   ├── html-content.service.ts
-│   │   ├── settings.service.ts
-│   │   ├── settings.service.spec.ts
-│   │   ├── validation.service.ts
-│   │   ├── responsive.service.ts
-│   │   └── html-parsing.service.ts
+│   │   ├── settings.service.ts                  # LocalStorage settings management
+│   │   ├── settings.service.spec.ts             # Settings service tests
+│   │   ├── validation.service.ts                # Layout and content validation
+│   │   └── responsive.service.ts                # Screen size detection and responsive configs
 │   ├── models/
-│   │   └── section.model.ts
+│   │   └── section.model.ts                     # TypeScript interfaces and types
 │   ├── pipes/
-│   │   └── safe-html.pipe.ts
-│   ├── app.component.ts
-│   ├── app.component.html
-│   ├── app.component.css
-│   ├── app.component.spec.ts
-│   └── app.module.ts
-├── assets/
-│   └── .gitkeep
+│   │   └── safe-html.pipe.ts                    # HTML sanitization pipe
+│   ├── app.component.ts                         # Root component
+│   ├── app.component.html                       # Root template
+│   ├── app.component.css                        # Root styles
+│   ├── app.component.spec.ts                    # Root component tests
+│   └── app.module.ts                            # Angular module configuration
+├── assets/                                      # Static assets
 ├── environments/
-│   ├── environment.ts
-│   └── environment.prod.ts
+│   ├── environment.ts                           # Development environment config
+│   └── environment.prod.ts                      # Production environment config
 ├── favicon.ico
-├── index.html
-├── main.ts
-├── polyfills.ts
-├── styles.css
-└── test.ts
+├── index.html                                   # Main HTML file
+├── main.ts                                      # Application bootstrap
+├── polyfills.ts                                 # Polyfills for browser compatibility
+├── styles.css                                   # Global styles
+└── test.ts                                      # Test configuration
 ```
 
-## 🛠️ Technologies Used
+## 🛠️ Technologies & Libraries Used
 
-- **Angular 13.3.0**: Core framework with TypeScript
-- **TinyMCE 6.0.1**: Rich text editor for content formatting
-- **jsPDF 2.5.1**: PDF generation library
-- **html2canvas 1.4.1**: HTML to canvas conversion for accurate PDF rendering
-- **html2pdf.js 0.10.3**: Additional PDF generation capabilities
+### Core Framework
+- **Angular 13.3.0**: Core framework with TypeScript 4.6.2
+- **RxJS 7.5.0**: Reactive programming for observables and streams
+- **TypeScript 4.6.2**: Type-safe JavaScript superset
+
+### UI Libraries
+- **@tinymce/tinymce-angular 6.0.1**: Rich text editor integration for TinyMCE
+- **TinyMCE 6.0.1**: Feature-rich WYSIWYG editor (loaded via CDN)
 - **Tailwind CSS 3.4.17**: Utility-first CSS framework
-- **RxJS 7.5.0**: Reactive programming
-- **Angular CDK 13.3.9**: Component development kit
-- **PostCSS 8.5.6**: CSS processing
-- **Autoprefixer 10.4.21**: CSS vendor prefixing
+- **PostCSS 8.5.6**: CSS processing and transformation
+- **Autoprefixer 10.4.21**: Automatic CSS vendor prefixing
 
-## 🔍 Key Services
+### Interaction Libraries
+- **interactjs 1.10.27**: Drag and drop, resizing with snapping and collision detection
+- **@angular/cdk 13.3.9**: Angular Component Dev Kit for drag-drop module
+  - DragDropModule for list reordering in diagnosis fields
 
-### PDF Export Service
-- Dual export methods: Traditional jsPDF and html2canvas-based
-- Support for multiple paper sizes (A4, A5, Letter, Legal, Custom)
-- Clean PDF generation without visual borders
-- Metadata addition and watermark support
+### Development Tools
+- **@angular/cli 13**: Angular command-line interface
+- **Karma 6.3.0**: Test runner
+- **Jasmine 4.0.0**: Testing framework
+- **@angular-devkit/build-angular 13.3.11**: Angular build tools
 
-### Settings Service
+### Browser APIs Used
+- **Window.print()**: Browser print functionality for PDF export
+- **LocalStorage API**: Settings persistence
+- **CSS @page Rule**: Dynamic print page sizing
+
+## 🔍 Key Services & Components
+
+### ComprehensiveLayoutComponent
+- Main application component managing all layout logic
+- Handles section creation, deletion, duplication
+- Manages drag and drop via interact.js
+- Dynamic content sizing calculations
+- Print preview modal management
+- Settings save/load operations
+- Real-time validation integration
+
+### SettingsService
 - LocalStorage-based settings persistence
-- Import/export functionality for settings
+- Settings history management (max 20 entries)
 - Search and filtering capabilities
 - Version control for settings
-- Maximum history size management (20 entries)
+- Settings statistics and metadata
 
-### Validation Service
+### ValidationService
 - Real-time layout configuration validation
-- Section overlap detection
-- Content validation and warnings
-- Auto-fix capabilities for common issues
-- Comprehensive error reporting
+- Section overlap detection and warnings
+- Content validation (empty content, size constraints)
+- Auto-fix capabilities for common layout issues
+- Comprehensive error and warning reporting
+- Batch validation for all sections
 
-### Responsive Service
-- Screen size detection and monitoring
-- Adaptive layout configurations
-- Mobile, tablet, and desktop optimizations
-- Debounced resize event handling
+### ResponsiveService
+- Screen size detection and monitoring (mobile/tablet/desktop)
+- RxJS-based resize event handling with debouncing
+- Adaptive layout configurations per device type
+- Optimal config calculation based on screen size
 
-### HTML Content Service
-- HTML to text conversion
-- Formatted text extraction
-- HTML entity decoding
-- Alignment preservation
-- Content cleaning and normalization
+### TinyMCEEditorComponent
+- TinyMCE editor wrapper with ControlValueAccessor
+- Custom toolbar configuration
+- HTML content sanitization
+- Real-time content change detection
+- Auto-resize based on content
+- Font size in pixels (11px default)
+
+### DiagnosisFieldsComponent
+- Structured diagnosis input with nested fields
+- Drag and drop reordering using Angular CDK
+- HTML output generation from structured data
+- Parsing of existing HTML content back to fields
+- Add/remove titles and bullet points
+
+### SafeHtmlPipe
+- HTML sanitization using Angular DomSanitizer
+- Enhanced HTML processing for TinyMCE content
+- List styling preservation
+- Paragraph and formatting style injection
 
 ## 🔍 Troubleshooting
 
 ### Common Issues
 
-1. **PDF Export Not Working**
-   - Ensure all dependencies are installed: `npm install`
+1. **Print/PDF Export Not Working**
+   - Ensure browser print dialog is not blocked
    - Check browser console for errors
-   - Try using Print Preview as an alternative
-   - Verify html2canvas and jsPDF are properly loaded
+   - Verify CSS @page rules are being applied (check computed styles)
+   - Try different browsers (Chrome, Firefox, Safari, Edge)
+   - Ensure content fits within page boundaries
 
 2. **TinyMCE Not Loading**
-   - Check internet connection (requires CDN access)
-   - Verify API key in tinymce-editor.component.ts
-   - Ensure @tinymce/tinymce-angular is installed
+   - Check internet connection (TinyMCE loads from CDN)
+   - Verify API key in `tinymce-editor.component.ts` (line 9)
+   - Check browser console for CDN loading errors
+   - Ensure `@tinymce/tinymce-angular` package is installed
 
-3. **Layout Issues**
-   - Clear browser cache
-   - Check for CSS conflicts
+3. **Drag and Drop Not Working**
+   - Check browser console for interact.js errors
+   - Ensure sections are properly initialized (check ngAfterViewInit)
+   - Verify bodyArea ViewChild reference is available
+   - Check that sections have `data-section-id` attributes
+
+4. **Layout Issues**
+   - Clear browser cache and reload
+   - Check for CSS conflicts in browser DevTools
    - Ensure screen resolution is at least 1024x768
-   - Verify Tailwind CSS is properly configured
+   - Verify Tailwind CSS is properly configured and compiled
+   - Check that PostCSS and Autoprefixer are working
 
-4. **Settings Not Saving**
-   - Check browser localStorage support
-   - Verify browser permissions
-   - Clear browser data if needed
+5. **Settings Not Saving**
+   - Check browser localStorage support (most modern browsers support it)
+   - Verify browser permissions for localStorage
+   - Check browser console for quota exceeded errors
+   - Clear browser data if localStorage is corrupted
+   - Ensure settings name is provided (required field)
+
+6. **Content Sizing Issues**
+   - Check that sections aren't marked as manually resized
+   - Verify content is being parsed correctly
+   - Check browser console for sizing calculation logs
+   - Manually reset section sizing if needed
 
 ### Debug Mode
 
-To enable debug logging:
-```typescript
-// In comprehensive-layout.component.ts
-console.log('Debug mode enabled');
-```
+To enable debug logging, check the browser console. The application logs:
+- Section initialization and updates
+- Content height calculations
+- Interact.js setup and drag operations
+- Settings save/load operations
+- Validation results
 
 ## 🧪 Testing
 
@@ -249,8 +318,8 @@ npm test
 ```
 
 The project uses:
-- **Karma**: Test runner
-- **Jasmine**: Testing framework
+- **Karma 6.3.0**: Test runner
+- **Jasmine 4.0.0**: Testing framework
 - **Angular Testing Utilities**: Component testing
 
 ## 📦 Build
@@ -265,6 +334,8 @@ Build with watch mode:
 npm run watch
 ```
 
+Production build output is in `dist/dynamic-prescription/`.
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -276,10 +347,11 @@ npm run watch
 ### Development Guidelines
 
 - Follow Angular style guide
-- Use TypeScript strict mode
+- Use TypeScript strict mode (enabled in tsconfig.json)
 - Write unit tests for new features
 - Ensure responsive design compatibility
-- Test PDF export functionality thoroughly
+- Test print/PDF export functionality in multiple browsers
+- Document any new services or components
 
 ## 📄 License
 
@@ -287,22 +359,26 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
-- TinyMCE for the excellent rich text editor
-- jsPDF team for the PDF generation library
-- html2canvas for accurate HTML rendering
-- Angular team for the amazing framework
-- Tailwind CSS for the utility-first styling approach
-
+- **TinyMCE** for the excellent rich text editor
+- **Interact.js** for smooth drag and drop functionality
+- **Angular** team for the amazing framework
+- **Tailwind CSS** for the utility-first styling approach
+- **Angular CDK** for drag-drop list functionality
 
 ## 🔄 Version History
 
 - **v0.0.0**: Initial release with comprehensive prescription generation features
-- Angular 13.3.0 with TypeScript 4.6.2
-- TinyMCE 6.0.1 integration
-- PDF export with html2canvas and jsPDF
-- Responsive design with Tailwind CSS
-- Settings management with localStorage
+  - Angular 13.3.0 with TypeScript 4.6.2
+  - TinyMCE 6.0.1 integration for rich text editing
+  - Browser-based print/PDF export with dynamic @page sizing
+  - Interact.js for drag and drop functionality
+  - Responsive design with Tailwind CSS
+  - Settings management with localStorage (20 entry limit)
+  - Diagnosis fields component with structured input
+  - Dynamic content sizing based on content length
+  - Comprehensive validation service
+  - Responsive service for adaptive layouts
 
 ---
 
-**Note**: This application is designed for medical prescription generation. Please ensure compliance with local medical regulations and standards when using in a professional setting. The application provides a comprehensive tool for creating professional medical prescriptions with advanced formatting and export capabilities.
+**Note**: This application is designed for medical prescription generation. Please ensure compliance with local medical regulations and standards when using in a professional setting. The application provides a comprehensive tool for creating professional medical prescriptions with advanced formatting and browser-based export capabilities.
