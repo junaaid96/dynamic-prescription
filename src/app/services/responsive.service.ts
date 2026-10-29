@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, fromEvent } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Injectable, computed } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { fromEvent } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 
 export interface ScreenSize {
   width: number;
@@ -10,64 +11,57 @@ export interface ScreenSize {
   isDesktop: boolean;
 }
 
+export interface ResponsiveLayoutConfig {
+  configPanelWidth: string;
+  previewScale: number;
+  showColumnLayout: boolean;
+}
+
+const MOBILE_MAX_WIDTH = 768;
+const TABLET_MAX_WIDTH = 1024;
+
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ResponsiveService {
-  private screenSizeSubject = new BehaviorSubject<ScreenSize>(this.getScreenSize());
-  public screenSize$: Observable<ScreenSize> = this.screenSizeSubject.asObservable();
+  readonly screenSize = toSignal(
+    fromEvent(window, 'resize').pipe(
+      debounceTime(200),
+      map(() => this.readScreenSize()),
+      distinctUntilChanged((previous, next) => previous.width === next.width && previous.height === next.height),
+    ),
+    { initialValue: this.readScreenSize() },
+  );
 
-  constructor() {
-    // Listen for window resize events
-    fromEvent(window, 'resize')
-      .pipe(
-        debounceTime(200),
-        distinctUntilChanged()
-      )
-      .subscribe(() => {
-        this.screenSizeSubject.next(this.getScreenSize());
-      });
+  readonly optimalConfig = computed(() => this.configFor(this.screenSize()));
+
+  getCurrentScreenSize(): ScreenSize {
+    return this.screenSize();
   }
 
-  private getScreenSize(): ScreenSize {
+  getOptimalConfigForScreen(): ResponsiveLayoutConfig {
+    return this.optimalConfig();
+  }
+
+  private readScreenSize(): ScreenSize {
     const width = window.innerWidth;
     const height = window.innerHeight;
-
     return {
       width,
       height,
-      isMobile: width < 768,
-      isTablet: width >= 768 && width < 1024,
-      isDesktop: width >= 1024
+      isMobile: width < MOBILE_MAX_WIDTH,
+      isTablet: width >= MOBILE_MAX_WIDTH && width < TABLET_MAX_WIDTH,
+      isDesktop: width >= TABLET_MAX_WIDTH,
     };
   }
 
-  getCurrentScreenSize(): ScreenSize {
-    return this.getScreenSize();
-  }
-
-  // Helper method to adjust layout based on screen size
-  getOptimalConfigForScreen(): any {
-    const screenSize = this.getScreenSize();
-    
+  private configFor(screenSize: ScreenSize): ResponsiveLayoutConfig {
     if (screenSize.isMobile) {
-      return {
-        configPanelWidth: '100%',
-        previewScale: 0.5,
-        showColumnLayout: false
-      };
-    } else if (screenSize.isTablet) {
-      return {
-        configPanelWidth: '300px',
-        previewScale: 0.7,
-        showColumnLayout: true
-      };
-    } else {
-      return {
-        configPanelWidth: '350px',
-        previewScale: 1,
-        showColumnLayout: true
-      };
+      return { configPanelWidth: '100%', previewScale: 0.5, showColumnLayout: false };
     }
+    if (screenSize.isTablet) {
+      return { configPanelWidth: '300px', previewScale: 0.7, showColumnLayout: true };
+    }
+    return { configPanelWidth: '350px', previewScale: 1, showColumnLayout: true };
   }
 }

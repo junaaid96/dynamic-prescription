@@ -32,9 +32,9 @@ A modern, responsive Angular application for creating and exporting dynamic medi
 
 ## 📋 Prerequisites
 
-- Node.js (v14.x or higher)
-- npm (v6.x or higher)
-- Angular CLI (v13.x)
+- Node.js 22.22.3+, 24.15+, or 26+
+- npm 10+
+- The Angular CLI is installed locally by `npm install` (`npx ng`). A global CLI is not required.
 
 ## 🔧 Installation
 
@@ -144,61 +144,51 @@ http://localhost:4200
 src/
 ├── app/
 │   ├── components/
-│   │   ├── comprehensive-layout.component.ts    # Main layout component
-│   │   ├── comprehensive-layout.component.html   # Main layout template
-│   │   ├── comprehensive-layout.component.css    # Main layout styles
+│   │   ├── comprehensive-layout.component.ts     # Main layout component
+│   │   ├── comprehensive-layout.component.html
+│   │   ├── comprehensive-layout.component.css
 │   │   ├── tinymce-editor.component.ts           # TinyMCE wrapper component
-│   │   └── diagnosis-fields.component.ts        # Structured diagnosis input
+│   │   ├── tinymce-config.ts                     # TinyMCE init options
+│   │   └── diagnosis-fields.component.ts         # Structured diagnosis input
 │   ├── services/
-│   │   ├── settings.service.ts                  # LocalStorage settings management
-│   │   ├── settings.service.spec.ts             # Settings service tests
-│   │   ├── validation.service.ts                # Layout and content validation
-│   │   └── responsive.service.ts                # Screen size detection and responsive configs
+│   │   ├── settings.service.ts                   # localStorage settings management
+│   │   ├── validation.service.ts                 # Layout and content validation
+│   │   └── responsive.service.ts                 # Viewport breakpoints
 │   ├── models/
-│   │   └── section.model.ts                     # TypeScript interfaces and types
+│   │   └── section.model.ts                      # TypeScript interfaces
 │   ├── pipes/
-│   │   └── safe-html.pipe.ts                    # HTML sanitization pipe
-│   ├── app.component.ts                         # Root component
-│   ├── app.component.html                       # Root template
-│   ├── app.component.css                        # Root styles
-│   ├── app.component.spec.ts                    # Root component tests
-│   └── app.module.ts                            # Angular module configuration
-├── assets/                                      # Static assets
-├── environments/
-│   ├── environment.ts                           # Development environment config
-│   └── environment.prod.ts                      # Production environment config
-├── favicon.ico
-├── index.html                                   # Main HTML file
-├── main.ts                                      # Application bootstrap
-├── polyfills.ts                                 # Polyfills for browser compatibility
-├── styles.css                                   # Global styles
-└── test.ts                                      # Test configuration
+│   │   └── safe-html.pipe.ts                     # HTML sanitization pipe
+│   ├── app.component.ts                          # Root standalone component
+│   ├── app.config.ts                             # bootstrapApplication providers
+│   ├── app.component.html
+│   └── app.component.css
+├── index.html
+├── main.ts                                       # bootstrapApplication
+└── styles.css
+public/
+└── favicon.ico
 ```
 
 ## 🛠️ Technologies & Libraries Used
 
 ### Core Framework
-- **Angular 13.3.0**: Core framework with TypeScript 4.6.2
-- **RxJS 7.5.0**: Reactive programming for observables and streams
-- **TypeScript 4.6.2**: Type-safe JavaScript superset
+- **Angular 22.2**: Standalone components, signals, and zoneless change detection (no `zone.js`)
+- **TypeScript 6.0**: Strict compiler and strict templates
+- **RxJS 7.8**: Used where a stream is still the right tool (viewport resize), then read as a signal
 
 ### UI Libraries
-- **@tinymce/tinymce-angular 6.0.1**: Rich text editor integration for TinyMCE
-- **TinyMCE 6.0.1**: Feature-rich WYSIWYG editor (loaded via CDN)
-- **Tailwind CSS 3.4.17**: Utility-first CSS framework
-- **PostCSS 8.5.6**: CSS processing and transformation
-- **Autoprefixer 10.4.21**: Automatic CSS vendor prefixing
+- **@tinymce/tinymce-angular 9**: Rich text editor component
+- **TinyMCE 8**: Loaded from Tiny Cloud (cloud channel 8)
+- **Tailwind CSS 3.4**: Utility-first CSS
+- **PostCSS 8.5** and **Autoprefixer 10.4**
 
 ### Interaction Libraries
-- **interactjs 1.10.27**: Drag and drop, resizing with snapping and collision detection
-- **@angular/cdk 13.3.9**: Angular Component Dev Kit for drag-drop module
-  - DragDropModule for list reordering in diagnosis fields
+- **interactjs 1.10**: Drag and resize with snapping and collision detection
+- **Angular CDK 22**: Standalone `CdkDropList`, `CdkDrag`, and `CdkDragHandle` for diagnosis reordering
 
-### Development Tools
-- **@angular/cli 13**: Angular command-line interface
-- **Karma 6.3.0**: Test runner
-- **Jasmine 4.0.0**: Testing framework
-- **@angular-devkit/build-angular 13.3.11**: Angular build tools
+### Build and tests
+- **Angular CLI 22** with the `@angular/build` application builder (esbuild / Vite)
+- **Vitest 5** and **jsdom** via `ng test`
 
 ### Browser APIs Used
 - **Window.print()**: Browser print functionality for PDF export
@@ -232,18 +222,15 @@ src/
 - Batch validation for all sections
 
 ### ResponsiveService
-- Screen size detection and monitoring (mobile/tablet/desktop)
-- RxJS-based resize event handling with debouncing
-- Adaptive layout configurations per device type
-- Optimal config calculation based on screen size
+- Screen size detection (mobile / tablet / desktop), exposed as a signal
+- Debounced viewport resize handling
+- Suggested panel width and preview scale for the current breakpoint
 
 ### TinyMCEEditorComponent
-- TinyMCE editor wrapper with ControlValueAccessor
-- Custom toolbar configuration
-- HTML content sanitization
-- Real-time content change detection
-- Auto-resize based on content
-- Font size in pixels (11px default)
+- TinyMCE 8 wrapper that implements `ControlValueAccessor` (works with `ngModel` and reactive forms)
+- Signal inputs for toolbar, height, and chrome options
+- Blur marks the control touched; identical write-backs do not reset the editor
+- Default font size is 11px
 
 ### DiagnosisFieldsComponent
 - Structured diagnosis input with nested fields
@@ -270,16 +257,15 @@ src/
    - Ensure content fits within page boundaries
 
 2. **TinyMCE Not Loading**
-   - Check internet connection (TinyMCE loads from CDN)
-   - Verify API key in `tinymce-editor.component.ts` (line 9)
-   - Check browser console for CDN loading errors
-   - Ensure `@tinymce/tinymce-angular` package is installed
+   - Check internet connection (TinyMCE 8 loads from Tiny Cloud)
+   - Verify the API key constant in `tinymce-editor.component.ts`
+   - Check the browser console for CDN loading errors
+   - Ensure `@tinymce/tinymce-angular` is installed
 
 3. **Drag and Drop Not Working**
-   - Check browser console for interact.js errors
-   - Ensure sections are properly initialized (check ngAfterViewInit)
-   - Verify bodyArea ViewChild reference is available
-   - Check that sections have `data-section-id` attributes
+   - Check the browser console for interact.js errors
+   - Confirm the body area rendered (`#bodyArea`) and each section has a `data-section-id`
+   - Drag handles are wired after render; add a section and try again if the preview was still loading
 
 4. **Layout Issues**
    - Clear browser cache and reload
@@ -296,31 +282,29 @@ src/
    - Ensure settings name is provided (required field)
 
 6. **Content Sizing Issues**
-   - Check that sections aren't marked as manually resized
-   - Verify content is being parsed correctly
-   - Check browser console for sizing calculation logs
-   - Manually reset section sizing if needed
+   - Sections marked as manually resized skip automatic height calculation
+   - Use **Auto Size** to return a section to content-based height
+   - Use **Restore Defaults** to reset that section's content, style, and size
 
 ### Debug Mode
 
-To enable debug logging, check the browser console. The application logs:
-- Section initialization and updates
-- Content height calculations
-- Interact.js setup and drag operations
-- Settings save/load operations
-- Validation results
+Failed saves, failed loads, and interact.js setup errors are written to the browser console with `console.error`. Layout validation messages appear as on-screen notifications.
 
 ## 🧪 Testing
 
-Run the test suite:
+Run the unit tests once:
+
+```bash
+npm test -- --watch=false
+```
+
+Watch mode (re-runs on file changes in a terminal):
+
 ```bash
 npm test
 ```
 
-The project uses:
-- **Karma 6.3.0**: Test runner
-- **Jasmine 4.0.0**: Testing framework
-- **Angular Testing Utilities**: Component testing
+Tests use Vitest and jsdom through `ng test`. There is no Karma, Protractor, or separate `test.ts` entry. The project does not define a lint script; `npm run build` typechecks the application, including strict templates.
 
 ## 📦 Build
 
@@ -346,8 +330,8 @@ Production build output is in `dist/dynamic-prescription/`.
 
 ### Development Guidelines
 
-- Follow Angular style guide
-- Use TypeScript strict mode (enabled in tsconfig.json)
+- Follow the current Angular style guide: standalone components, `inject()`, signals, and `@if` / `@for` / `@switch`
+- Keep TypeScript `strict` and Angular `strictTemplates` enabled
 - Write unit tests for new features
 - Ensure responsive design compatibility
 - Test print/PDF export functionality in multiple browsers
@@ -367,17 +351,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🔄 Version History
 
-- **v0.0.0**: Initial release with comprehensive prescription generation features
-  - Angular 13.3.0 with TypeScript 4.6.2
-  - TinyMCE 6.0.1 integration for rich text editing
-  - Browser-based print/PDF export with dynamic @page sizing
-  - Interact.js for drag and drop functionality
-  - Responsive design with Tailwind CSS
-  - Settings management with localStorage (20 entry limit)
-  - Diagnosis fields component with structured input
-  - Dynamic content sizing based on content length
-  - Comprehensive validation service
-  - Responsive service for adaptive layouts
+- **Angular 22**: Standalone, zoneless, signal-based layout editor on the application builder and Vitest
+- **v0.0.0**: Initial prescription layout editor
+  - Live preview, browser print / PDF, TinyMCE, interact.js drag and resize
+  - Tailwind CSS, localStorage settings (20 entry limit), diagnosis fields
+  - Dynamic content sizing and layout validation
 
 ---
 

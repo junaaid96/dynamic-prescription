@@ -46,4 +46,20 @@ body {
   font-size: 11px !important;
 }
 
+app-tinymce-editor .tox-tinymce {
+  border: none !important;
+}
+
+app-tinymce-editor .tox-editor-header {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+app-tinymce-editor .tox-toolbar {
+  min-width: 400px;
+}
+
+app-tinymce-editor .tox-toolbar__group {
+  flex-wrap: nowrap;
+}
+
 
