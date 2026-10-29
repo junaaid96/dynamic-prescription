@@ -1,174 +1,172 @@
 import { Injectable } from '@angular/core';
 import { SavedSetting, SavedSettingConfig, SettingsHistory } from '../models/section.model';
 
-// Extended SettingsHistory with lastUpdated field
 interface ExtendedSettingsHistory extends Omit<SettingsHistory, 'maxSettings'> {
   lastUpdated: Date;
 }
 
+interface StoredSetting {
+  id?: unknown;
+  name?: unknown;
+  description?: unknown;
+  config?: unknown;
+  timestamp?: unknown;
+  version?: unknown;
+}
+
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SettingsService {
-  private readonly STORAGE_KEY = 'doctor_prescription_settings';
-  private readonly HISTORY_KEY = 'doctor_settings_history';
-  private readonly MAX_HISTORY_SIZE = 20;
+  private readonly historyKey = 'doctor_settings_history';
+  private readonly maxHistorySize = 20;
 
-  constructor() { }
-
-  /**
-   * Save a new setting to localStorage
-   */
   saveSetting(name: string, config: SavedSettingConfig, description?: string): SavedSetting {
     const setting: SavedSetting = {
       id: this.generateId(),
       name: name.trim(),
-      description: description?.trim(),
-      config: JSON.parse(JSON.stringify(config)), // Deep copy
+      description: description?.trim() || undefined,
+      config: structuredClone(config),
       timestamp: new Date(),
-      version: '1.0'
+      version: '1.0',
     };
 
-    // Get existing history
     const history = this.getSettingsHistory();
-    
-    // Add new setting to the beginning
     history.settings.unshift(setting);
-    
-    // Limit history size
-    if (history.settings.length > this.MAX_HISTORY_SIZE) {
-      history.settings = history.settings.slice(0, this.MAX_HISTORY_SIZE);
+    if (history.settings.length > this.maxHistorySize) {
+      history.settings = history.settings.slice(0, this.maxHistorySize);
     }
-    
     history.lastUpdated = new Date();
-    
-    // Save to localStorage
-    localStorage.setItem(this.HISTORY_KEY, JSON.stringify(history));
-    
+    this.persist(history);
     return setting;
   }
 
-  /**
-   * Get all saved settings
-   */
   getSettingsHistory(): ExtendedSettingsHistory {
     try {
-      const stored = localStorage.getItem(this.HISTORY_KEY);
-      if (stored) {
-        const history = JSON.parse(stored);
-        // Convert timestamp strings back to Date objects
-        history.settings = history.settings.map((setting: any) => ({
-          ...setting,
-          timestamp: new Date(setting.timestamp)
-        }));
-        history.lastUpdated = new Date(history.lastUpdated);
-        return history;
+      const stored = localStorage.getItem(this.historyKey);
+      if (!stored) {
+        return this.emptyHistory();
       }
+      const parsed: unknown = JSON.parse(stored);
+      if (!this.isRecord(parsed) || !Array.isArray(parsed['settings'])) {
+        return this.emptyHistory();
+      }
+
+      const settings = parsed['settings']
+        .map((entry) => this.parseSetting(entry))
+        .filter((entry): entry is SavedSetting => entry !== null);
+      const lastUpdated = this.parseDate(parsed['lastUpdated']) ?? new Date();
+      return { settings, lastUpdated };
     } catch (error) {
       console.error('Error loading settings history:', error);
+      return this.emptyHistory();
     }
-    
-    return {
-      settings: [],
-      lastUpdated: new Date()
-    };
   }
 
-  /**
-   * Load a specific setting by ID
-   */
   loadSetting(settingId: string): SavedSetting | null {
-    const history = this.getSettingsHistory();
-    const setting = history.settings.find(s => s.id === settingId);
-    return setting || null;
+    return this.getSettingsHistory().settings.find((setting) => setting.id === settingId) ?? null;
   }
 
-  /**
-   * Delete a setting
-   */
   deleteSetting(settingId: string): boolean {
     const history = this.getSettingsHistory();
     const initialLength = history.settings.length;
-    
-    history.settings = history.settings.filter(s => s.id !== settingId);
-    history.lastUpdated = new Date();
-    
-    if (history.settings.length !== initialLength) {
-      localStorage.setItem(this.HISTORY_KEY, JSON.stringify(history));
-      return true;
+    history.settings = history.settings.filter((setting) => setting.id !== settingId);
+    if (history.settings.length === initialLength) {
+      return false;
     }
-    
-    return false;
+    history.lastUpdated = new Date();
+    this.persist(history);
+    return true;
   }
 
-  /**
-   * Update an existing setting
-   */
   updateSetting(settingId: string, updates: Partial<SavedSetting>): SavedSetting | null {
     const history = this.getSettingsHistory();
-    const settingIndex = history.settings.findIndex(s => s.id === settingId);
-    
-    if (settingIndex !== -1) {
-      const updatedSetting = {
-        ...history.settings[settingIndex],
-        ...updates,
-        timestamp: new Date() // Update timestamp
-      };
-      
-      history.settings[settingIndex] = updatedSetting;
-      history.lastUpdated = new Date();
-      
-      localStorage.setItem(this.HISTORY_KEY, JSON.stringify(history));
-      return updatedSetting;
+    const settingIndex = history.settings.findIndex((setting) => setting.id === settingId);
+    if (settingIndex === -1) {
+      return null;
     }
-    
-    return null;
+
+    const current = history.settings[settingIndex];
+    const updatedSetting: SavedSetting = {
+      ...current,
+      ...updates,
+      id: current.id,
+      timestamp: new Date(),
+    };
+    history.settings[settingIndex] = updatedSetting;
+    history.lastUpdated = new Date();
+    this.persist(history);
+    return updatedSetting;
   }
 
-  /**
-   * Clear all settings
-   */
   clearAllSettings(): void {
-    localStorage.removeItem(this.HISTORY_KEY);
+    localStorage.removeItem(this.historyKey);
   }
 
-
-  /**
-   * Get settings statistics
-   */
   getSettingsStats(): { total: number; oldest: Date | null; newest: Date | null } {
-    const history = this.getSettingsHistory();
-    const settings = history.settings;
-    
+    const settings = this.getSettingsHistory().settings.filter((setting) => !Number.isNaN(setting.timestamp.getTime()));
     if (settings.length === 0) {
       return { total: 0, oldest: null, newest: null };
     }
-    
-    const timestamps = settings.map(s => s.timestamp.getTime());
+    const timestamps = settings.map((setting) => setting.timestamp.getTime());
     return {
       total: settings.length,
       oldest: new Date(Math.min(...timestamps)),
-      newest: new Date(Math.max(...timestamps))
+      newest: new Date(Math.max(...timestamps)),
     };
   }
 
-  /**
-   * Search settings by name or description
-   */
   searchSettings(query: string): SavedSetting[] {
-    const history = this.getSettingsHistory();
     const searchTerm = query.toLowerCase();
-    
-    return history.settings.filter(setting => 
+    return this.getSettingsHistory().settings.filter((setting) =>
       setting.name.toLowerCase().includes(searchTerm) ||
-      (setting.description && setting.description.toLowerCase().includes(searchTerm))
+      (setting.description?.toLowerCase().includes(searchTerm) ?? false),
     );
   }
 
-  /**
-   * Generate unique ID for settings
-   */
-  private generateId(): string {
-    return 'setting_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  private persist(history: ExtendedSettingsHistory): void {
+    localStorage.setItem(this.historyKey, JSON.stringify(history));
   }
-} 
+
+  private emptyHistory(): ExtendedSettingsHistory {
+    return { settings: [], lastUpdated: new Date() };
+  }
+
+  private parseSetting(entry: unknown): SavedSetting | null {
+    if (!this.isRecord(entry)) {
+      return null;
+    }
+    const stored = entry as StoredSetting;
+    if (typeof stored.id !== 'string' || typeof stored.name !== 'string' || !this.isRecord(stored.config)) {
+      return null;
+    }
+    const timestamp = this.parseDate(stored.timestamp);
+    if (!timestamp) {
+      return null;
+    }
+    return {
+      id: stored.id,
+      name: stored.name,
+      description: typeof stored.description === 'string' ? stored.description : undefined,
+      config: stored.config as unknown as SavedSettingConfig,
+      timestamp,
+      version: typeof stored.version === 'string' ? stored.version : '1.0',
+    };
+  }
+
+  private parseDate(value: unknown): Date | null {
+    if (typeof value !== 'string' && typeof value !== 'number') {
+      return null;
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
+  private generateId(): string {
+    return `setting_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+  }
+}

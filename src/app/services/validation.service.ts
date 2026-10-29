@@ -2,12 +2,9 @@ import { Injectable } from '@angular/core';
 import { BodySection, LayoutConfig, ValidationResult } from '../models/section.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ValidationService {
-
-  constructor() { }
-
   validateLayoutConfig(config: LayoutConfig): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -187,35 +184,28 @@ export class ValidationService {
       bottom: section2.position.y + section2.size.height
     };
 
-    // Check if sections actually overlap
     if (!this.sectionsOverlap(section1, section2)) {
       return null;
     }
 
-    // Calculate overlap amounts
-    const overlapX = Math.min(rect1.right, rect2.right) - Math.max(rect1.left, rect2.left);
-    const overlapY = Math.min(rect1.bottom, rect2.bottom) - Math.max(rect1.top, rect2.top);
-
-    // Calculate possible new positions
     const positions = [
-      // Move right
       { x: rect1.right + 1, y: section2.position.y },
-      // Move left
       { x: rect1.left - section2.size.width - 1, y: section2.position.y },
-      // Move down
       { x: section2.position.x, y: rect1.bottom + 1 },
-      // Move up
-      { x: section2.position.x, y: rect1.top - section2.size.height - 1 }
+      { x: section2.position.x, y: rect1.top - section2.size.height - 1 },
     ];
 
-    // Find the best position (closest to original)
-    let bestPosition = positions[0];
-    let minDistance = Math.abs(positions[0].x - section2.position.x) + Math.abs(positions[0].y - section2.position.y);
+    let bestPosition: { x: number; y: number } | null = null;
+    let minDistance = Number.POSITIVE_INFINITY;
 
     for (const pos of positions) {
+      const inBounds = pos.x >= 0 && pos.y >= 0 &&
+        pos.x + section2.size.width <= 100 && pos.y + section2.size.height <= 100;
+      if (!inBounds) {
+        continue;
+      }
       const distance = Math.abs(pos.x - section2.position.x) + Math.abs(pos.y - section2.position.y);
-      if (distance < minDistance && pos.x >= 0 && pos.y >= 0 && 
-          pos.x + section2.size.width <= 100 && pos.y + section2.size.height <= 100) {
+      if (distance < minDistance) {
         bestPosition = pos;
         minDistance = distance;
       }
@@ -226,11 +216,18 @@ export class ValidationService {
 
   // Helper method to fix common issues
   autoFixLayout(config: LayoutConfig): LayoutConfig {
-    const fixed = { ...config };
+    const fixed: LayoutConfig = {
+      ...config,
+      columnLayout: { ...config.columnLayout },
+      bodySection: { ...config.bodySection },
+    };
 
-    // Ensure column widths add up to 100%
     const total = fixed.columnLayout.column1 + fixed.columnLayout.column2 + fixed.columnLayout.column3;
-    if (Math.abs(total - 100) > 0.01) {
+    if (total === 0) {
+      fixed.columnLayout.column1 = 100;
+      fixed.columnLayout.column2 = 0;
+      fixed.columnLayout.column3 = 0;
+    } else if (Math.abs(total - 100) > 0.01) {
       const scale = 100 / total;
       fixed.columnLayout.column1 = Math.round(fixed.columnLayout.column1 * scale * 100) / 100;
       fixed.columnLayout.column2 = Math.round(fixed.columnLayout.column2 * scale * 100) / 100;
@@ -302,7 +299,12 @@ export class ValidationService {
 
   // Auto-fix individual section
   autoFixSection(section: BodySection): BodySection {
-    const fixed = { ...section };
+    const fixed: BodySection = {
+      ...section,
+      position: { ...section.position },
+      size: { ...section.size },
+      style: { ...section.style },
+    };
 
     // Adjust position if it exceeds boundaries
     if (fixed.position.x < 0) fixed.position.x = 0;

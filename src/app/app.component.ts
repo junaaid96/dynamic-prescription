@@ -1,13 +1,13 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ComprehensiveLayoutComponent } from './components/comprehensive-layout.component';
 
 @Component({
   selector: 'app-root',
+  imports: [ComprehensiveLayoutComponent],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+  styleUrl: './app.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
-  title = 'dynamic-prescription';
-
-  constructor() { }
+  readonly title = signal('dynamic-prescription');
 }
-
