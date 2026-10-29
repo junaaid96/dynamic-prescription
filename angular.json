@@ -18,9 +18,6 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
-            "allowedCommonJsDependencies": [
-              "interactjs"
-            ],
             "assets": [
               {
                 "glob": "**/*",

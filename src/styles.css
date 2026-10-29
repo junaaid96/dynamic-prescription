@@ -1,65 +1,61 @@
-/* You can add global styles to this file, and also import other style files */
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Global font improvements for TinyMCE content */
-b, strong {
-  font-weight: 700 !important;
+/* ---------- Design system ---------- */
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply antialiased; }
+  :focus-visible { @apply outline-none ring-2 ring-teal-500 ring-offset-1 ring-offset-white dark:ring-offset-slate-900; }
 }
 
-em, i {
-  font-style: italic !important;
+@layer components {
+  .card { @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900; }
+  .card-title { @apply px-1 text-sm font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-400; }
+  .label { @apply mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400; }
+  .field {
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-900 placeholder:text-slate-400
+      transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30
+      dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500;
+  }
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700
+      transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40
+      dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700;
+  }
+  .btn-primary { @apply border-teal-600 bg-teal-600 text-white hover:bg-teal-700 dark:border-teal-500 dark:bg-teal-600 dark:text-white dark:hover:bg-teal-500; }
+  .icon-btn {
+    @apply grid size-8 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900
+      disabled:opacity-30 dark:hover:bg-slate-800 dark:hover:text-white;
+  }
+  .chip {
+    @apply rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700 transition
+      hover:border-teal-500 hover:text-teal-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:text-teal-300;
+  }
+  .chip-on { @apply border-teal-600 bg-teal-600 text-white hover:text-white dark:border-teal-500 dark:bg-teal-600; }
+  .seg { @apply inline-flex rounded-lg bg-slate-200 p-0.5 text-sm dark:bg-slate-800; }
+  .seg > button { @apply rounded-md px-3 py-1 font-medium text-slate-600 transition dark:text-slate-300; }
+  .seg > button.seg-on { @apply bg-white text-slate-900 shadow-sm dark:bg-slate-600 dark:text-white; }
+  .tab { @apply whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200; }
+  .tab-on { @apply border-teal-600 text-teal-700 dark:text-teal-400; }
+  .preset { @apply flex flex-col items-start rounded-lg border border-slate-300 p-2.5 text-left transition hover:border-teal-500 dark:border-slate-700; }
+  .preset-on { @apply border-teal-600 bg-teal-50 ring-1 ring-teal-600 dark:bg-teal-900/30; }
+  .med-row { @apply rounded-lg border border-transparent p-1.5 transition; }
+  .med-row-active { @apply border-teal-200 bg-teal-50/60 dark:border-teal-800 dark:bg-teal-900/20; }
+  .kbd { @apply ml-1 rounded border border-slate-300 bg-slate-50 px-1 font-mono text-[0.7rem] text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300; }
 }
 
-u {
-  text-decoration: underline !important;
+/* Zone guides on the on-screen preview only */
+.guide-zone { outline: 1px dashed rgb(20 184 166 / 0.45); outline-offset: -1px; }
+.guide-preprinted { background: repeating-linear-gradient(135deg, rgb(148 163 184 / 0.12) 0 6px, transparent 6px 12px); }
+
+/* ---------- Printing ---------- */
+.print-root { display: none; }
+
+@media print {
+  html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  .app-root { display: none !important; }
+  .print-root { display: block; }
+  .print-root .rx-sheet { box-shadow: none; page-break-after: avoid; break-after: avoid; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
-
-/* Global list styling for better TinyMCE compatibility */
-ul {
-  list-style-type: disc;
-  list-style-position: outside;
-}
-
-ol {
-  list-style-type: decimal;
-  list-style-position: outside;
-}
-
-li {
-  display: list-item;
-}
-
-/* Set consistent default font size (11px converted from 8pt) */
-body {
-  font-size: 11px;
-}
-
-/* Ensure TinyMCE content renders properly */
-.tox-tinymce {
-  font-size: 11px !important;
-}
-
-.mce-content-body {
-  font-size: 11px !important;
-}
-
-app-tinymce-editor .tox-tinymce {
-  border: none !important;
-}
-
-app-tinymce-editor .tox-editor-header {
-  border-bottom: 1px solid #e2e8f0;
-}
-
-app-tinymce-editor .tox-toolbar {
-  min-width: 400px;
-}
-
-app-tinymce-editor .tox-toolbar__group {
-  flex-wrap: nowrap;
-}
-
-

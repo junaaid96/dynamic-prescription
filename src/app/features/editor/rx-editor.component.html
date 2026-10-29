@@ -1,0 +1,167 @@
+@let rx = store.rx();
+<form class="space-y-4" (submit)="$event.preventDefault()" aria-label="Prescription form">
+
+  <!-- Patient -->
+  <fieldset class="card">
+    <legend class="card-title">Patient</legend>
+    <div class="grid grid-cols-6 gap-2">
+      <label class="col-span-6 sm:col-span-4">
+        <span class="label">Name</span>
+        <input id="patient-name" class="field" autocomplete="off" [value]="rx.patient.name"
+               (input)="setPatient('name', $event)" placeholder="Full name" />
+      </label>
+      <label class="col-span-3 sm:col-span-2">
+        <span class="label">Date</span>
+        <input type="date" class="field" [value]="rx.date" (input)="setField('date', $event)" />
+      </label>
+      <label class="col-span-3 sm:col-span-1">
+        <span class="label">Age</span>
+        <input class="field" [value]="rx.patient.age" (input)="setPatient('age', $event)" placeholder="32 y" />
+      </label>
+      <label class="col-span-2 sm:col-span-1">
+        <span class="label">Sex</span>
+        <select class="field" [value]="rx.patient.sex" (change)="setPatient('sex', $event)">
+          <option value="">–</option><option value="M">Male</option>
+          <option value="F">Female</option><option value="O">Other</option>
+        </select>
+      </label>
+      <label class="col-span-2 sm:col-span-1">
+        <span class="label">Weight</span>
+        <input class="field" [value]="rx.patient.weight" (input)="setPatient('weight', $event)" placeholder="60 kg" />
+      </label>
+      <label class="col-span-2 sm:col-span-1">
+        <span class="label">Patient ID</span>
+        <input class="field" [value]="rx.patient.id" (input)="setPatient('id', $event)" />
+      </label>
+      <label class="col-span-6 sm:col-span-2">
+        <span class="label">Phone</span>
+        <input type="tel" class="field" [value]="rx.patient.phone" (input)="setPatient('phone', $event)" />
+      </label>
+    </div>
+  </fieldset>
+
+  <!-- Clinical notes -->
+  <fieldset class="card">
+    <legend class="card-title">Clinical notes</legend>
+    <div class="grid gap-2 sm:grid-cols-2">
+      @for (f of clinical; track f.key) {
+        <label [class.sm:col-span-2]="f.key === 'diagnosis'">
+          <span class="label">{{ f.label }}</span>
+          <textarea class="field resize-y" [rows]="f.rows" [placeholder]="f.placeholder"
+                    [value]="rx[f.key]" (input)="setField(f.key, $event)"></textarea>
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <!-- Medicines -->
+  <fieldset class="card">
+    <legend class="card-title flex w-full items-center justify-between">
+      <span>Medicines <span class="font-normal text-slate-500">({{ rx.medicines.length }})</span></span>
+    </legend>
+
+    @if (store.favourites().length) {
+      <div class="mb-3 flex flex-wrap items-center gap-1.5" aria-label="Favourite medicines">
+        <span class="text-xs font-medium text-slate-500">★ Quick add:</span>
+        @for (f of store.favourites(); track f) {
+          <button type="button" class="chip" (click)="add(f)">{{ f }}</button>
+        }
+      </div>
+    }
+
+    <datalist id="drug-list">
+      @for (d of store.drugSuggestions(); track d) { <option [value]="d"></option> }
+    </datalist>
+    <datalist id="timing-list">@for (t of timingChips; track t) { <option [value]="t"></option> }</datalist>
+    <datalist id="duration-list">@for (t of durationChips; track t) { <option [value]="t"></option> }</datalist>
+
+    <ol class="space-y-2">
+      @for (m of rx.medicines; track m.id; let i = $index, first = $first, last = $last) {
+        <li class="med-row" [class.med-row-active]="activeMed() === m.id" (focusin)="activeMed.set(m.id)">
+          <div class="flex items-start gap-2">
+            <span class="mt-2 w-5 shrink-0 text-right text-sm font-semibold text-slate-400">{{ i + 1 }}</span>
+            <div class="grid min-w-0 flex-1 grid-cols-12 gap-2">
+              <label class="col-span-12 md:col-span-5">
+                <span class="sr-only">Medicine {{ i + 1 }} name</span>
+                <input class="field font-medium" list="drug-list" autocomplete="off" [id]="'med-name-' + m.id"
+                       placeholder="Tab. Paracetamol 500 mg" [value]="m.name"
+                       (input)="update(m, 'name', valueOf($event))"
+                       (keydown.enter)="next($event, 'med-dose-' + m.id)" />
+              </label>
+              <label class="col-span-4 md:col-span-2">
+                <span class="sr-only">Dose</span>
+                <input class="field text-center" [id]="'med-dose-' + m.id" placeholder="1+0+1" [value]="m.dose"
+                       (input)="update(m, 'dose', valueOf($event))"
+                       (keydown.enter)="next($event, 'med-timing-' + m.id)" />
+              </label>
+              <label class="col-span-4 md:col-span-3">
+                <span class="sr-only">When</span>
+                <input class="field" list="timing-list" [id]="'med-timing-' + m.id" placeholder="After meal" [value]="m.timing"
+                       (input)="update(m, 'timing', valueOf($event))"
+                       (keydown.enter)="next($event, 'med-duration-' + m.id)" />
+              </label>
+              <label class="col-span-4 md:col-span-2">
+                <span class="sr-only">Duration</span>
+                <input class="field" list="duration-list" [id]="'med-duration-' + m.id" placeholder="7 days" [value]="m.duration"
+                       (input)="update(m, 'duration', valueOf($event))"
+                       (keydown.enter)="$event.preventDefault(); add()" />
+              </label>
+              @if (activeMed() === m.id) {
+                <div class="col-span-12 flex flex-wrap gap-1" aria-label="Quick dose">
+                  @for (c of doseChips; track c) {
+                    <button type="button" class="chip" [class.chip-on]="m.dose === c" (click)="update(m, 'dose', c)">{{ c }}</button>
+                  }
+                  <span class="mx-1 border-l border-slate-300 dark:border-slate-600"></span>
+                  @for (c of timingChips.slice(0, 3); track c) {
+                    <button type="button" class="chip" [class.chip-on]="m.timing === c" (click)="update(m, 'timing', c)">{{ c }}</button>
+                  }
+                  <span class="mx-1 border-l border-slate-300 dark:border-slate-600"></span>
+                  @for (c of durationChips.slice(1, 5); track c) {
+                    <button type="button" class="chip" [class.chip-on]="m.duration === c" (click)="update(m, 'duration', c)">{{ c }}</button>
+                  }
+                </div>
+                <label class="col-span-12">
+                  <span class="sr-only">Note</span>
+                  <input class="field text-sm" placeholder="Note (optional): e.g. dissolve in water, avoid driving"
+                         [value]="m.note" (input)="update(m, 'note', valueOf($event))" />
+                </label>
+              }
+            </div>
+            <div class="flex shrink-0 flex-col">
+              <button type="button" class="icon-btn" [disabled]="first" (click)="store.moveMedicine(m.id, -1)" [attr.aria-label]="'Move medicine ' + (i + 1) + ' up'">↑</button>
+              <button type="button" class="icon-btn" [disabled]="last" (click)="store.moveMedicine(m.id, 1)" [attr.aria-label]="'Move medicine ' + (i + 1) + ' down'">↓</button>
+              <button type="button" class="icon-btn hover:text-red-600" (click)="store.removeMedicine(m.id)" [attr.aria-label]="'Remove medicine ' + (i + 1)">✕</button>
+            </div>
+          </div>
+        </li>
+      } @empty {
+        <li class="rounded-lg border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500 dark:border-slate-600">
+          No medicines yet. Add one, use a ★ favourite, or apply a template.
+        </li>
+      }
+    </ol>
+    <button id="add-medicine" type="button" class="btn mt-3 w-full justify-center" (click)="add()">
+      + Add medicine <kbd class="kbd">Ctrl</kbd><kbd class="kbd">Enter</kbd>
+    </button>
+  </fieldset>
+
+  <!-- Advice & follow-up -->
+  <fieldset class="card">
+    <legend class="card-title">Advice &amp; follow-up</legend>
+    <label class="block">
+      <span class="label">Advice</span>
+      <textarea class="field resize-y" rows="3" placeholder="Plenty of fluids, rest, avoid oily food…"
+                [value]="rx.advice" (input)="setField('advice', $event)"></textarea>
+    </label>
+    <label class="mt-2 block">
+      <span class="label">Follow-up</span>
+      <input class="field" [value]="rx.followUp" (input)="setField('followUp', $event)" placeholder="After 7 days / with reports" />
+    </label>
+    <div class="mt-2 flex flex-wrap gap-1.5">
+      @for (d of [3, 7, 14, 30]; track d) {
+        <button type="button" class="chip" (click)="setFollowUpDays(d)">+{{ d }} days</button>
+      }
+      <button type="button" class="chip" (click)="store.setField('followUp', 'With investigation reports')">With reports</button>
+    </div>
+  </fieldset>
+</form>
