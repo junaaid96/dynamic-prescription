@@ -5,6 +5,8 @@
 [![Live demo](https://img.shields.io/badge/demo-dynamic--prescription.vercel.app-0f766e)](https://dynamic-prescription.vercel.app)
 [![CI](https://github.com/junaaid96/dynamic-prescription/actions/workflows/ci.yml/badge.svg)](https://github.com/junaaid96/dynamic-prescription/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Angular](https://img.shields.io/badge/Angular-22-dd0031?logo=angular)](https://angular.dev)
+[![Release](https://img.shields.io/github/v/release/junaaid96/dynamic-prescription)](https://github.com/junaaid96/dynamic-prescription/releases)
 
 Prescription Pad is a free, open-source, local-first web app for doctors who write on their **own printed pads**. Some pads have the chamber letterhead already printed, others are plain paper, and they come in many sizes. You describe the pad once (size, header/footer zones, margins), calibrate it with a 100 mm test print, and from then on every prescription lands in the right place on the paper.
 
@@ -24,7 +26,7 @@ There is no backend and no account. Pads, drafts, templates and history are stor
 - Several pad profiles (for example "Chamber A5" and "Hospital A4"), switched from the toolbar.
 
 **Fast writing**
-- Patient line, chief complaints, history, examination, diagnosis and investigations, laid out like a standard South Asian prescription with a ℞ column.
+- Patient line, chief complaints, history, examination, diagnosis and investigations, laid out like a standard prescription with a ℞ column.
 - Drug autocomplete with **learned usual doses**: a drug you have used before fills in its last dose, timing and duration.
 - One-tap chips for doses (`1+0+1`, `0+0+1`, SOS…), timing (before/after meal) and duration.
 - Enter moves to the next field; Enter on the last field adds a new medicine.
@@ -128,11 +130,15 @@ Everything stays in your browser's `localStorage`. Clearing site data removes it
 
 ## Roadmap
 
-See [docs/DESIGN.md](docs/DESIGN.md#next-ideas): a drug database with generic/brand mapping, Bangla output, export/import of pad profiles, PDF export and signature placement.
+See [docs/DESIGN.md](docs/DESIGN.md#next-ideas): a drug database with generic/brand mapping, multilingual output, export/import of pad profiles, PDF export and signature placement.
 
 ## Contributing
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md), then open an issue or pull request.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md), then open an issue or pull request. Release notes live in [CHANGELOG.md](CHANGELOG.md).
+
+## Security
+
+Please report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
 ## License
 
