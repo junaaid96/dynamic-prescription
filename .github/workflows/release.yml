@@ -1,0 +1,29 @@
+name: release
+
+# Tagged releases (v*) run tests, build the static site and attach it to a GitHub release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --watch=false
+      - run: npm run build
+      - run: tar -czf dynamic-prescription-${GITHUB_REF_NAME}.tar.gz -C dist/dynamic-prescription/browser .
+      - name: Upload build to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" dynamic-prescription-${GITHUB_REF_NAME}.tar.gz --clobber

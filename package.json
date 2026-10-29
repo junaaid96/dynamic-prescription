@@ -1,6 +1,27 @@
 {
   "name": "dynamic-prescription",
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Local-first web app for doctors to write prescriptions and print them exactly onto their own pad size.",
+  "license": "MIT",
+  "author": "Md. Junaidul Islam (https://github.com/junaaid96)",
+  "homepage": "https://dynamic-prescription.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/junaaid96/dynamic-prescription.git"
+  },
+  "bugs": {
+    "url": "https://github.com/junaaid96/dynamic-prescription/issues"
+  },
+  "keywords": [
+    "prescription",
+    "doctor",
+    "medical",
+    "print",
+    "pad",
+    "angular",
+    "local-first",
+    "healthcare"
+  ],
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

@@ -6,7 +6,7 @@ Doctors often write on their **own pads**. Some pads have the chamber letterhead
 ## Research summary
 - **Speed of entry is what matters most.** EHR usability work (for example the clinician e-prescribing guides and the "Inspired EHRs" guidelines) keeps finding the same things help: predictive drug search, favourites, **pre-filled usual doses**, **order sets** (templates), a review step before you sign or print, and changing a prescription without starting over.
 - **Print accuracy on the web:** `@page { size: W H; margin: 0 }` needs both dimensions given explicitly. Browsers still add their own scaling and margins unless the user picks *Actual size / 100%* and *Margins: None*. The reliable way to fix the rest is a **calibration print**: print a known 100 mm ruler, measure it, and store a scale factor plus X/Y offsets.
-- **Prescription format used locally (Bangladesh/South Asia):** a letterhead at the top, a patient line, a narrow left column for C/C, O/E, diagnosis and investigations, then a large **℞** column. Doses are written as `1+0+1`, followed by timing (before/after meal), duration, advice and follow-up date.
+- **Common prescription format:** a letterhead at the top, a patient line, a narrow left column for C/C, O/E, diagnosis and investigations, then a large **℞** column. Doses are written as `1+0+1`, followed by timing (before/after meal), duration, advice and follow-up date.
 
 ## Personas
 1. **Busy GP (40–60 patients a day):** wants a finished prescription in under a minute, using the keyboard only, with the same handful of drugs every day.
@@ -30,7 +30,7 @@ Doctors often write on their **own pads**. Some pads have the chamber letterhead
 
 ## Next ideas
 - A drug database with generic/brand mapping and interaction warnings.
-- Bangla / bilingual output and fonts.
+- Multilingual / bilingual output and fonts.
 - Export/import pad profiles (JSON or QR) to share across devices.
 - A PDF export and a patient copy, plus optional cloud sync.
 - Signature image and doctor's seal placement.
